@@ -1,83 +1,70 @@
-# NAVAIRGAP · 3D Interactive Portfolio
+# NAVAIRGAP — 3D Interactive Portfolio
 
-![Room preview — day theme](docs/screenshot-light.png)
-
-An interactive, photorealistic **3D portfolio** that runs in the browser. Explore a security researcher's room — click the monitor, peek at the keyboard, open the books, spin the Rubik's cube, and answer the phone.
+An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — click the monitor, peek at the keyboard, open the books, spin the Rubik's cube, and answer the phone.
 
 Built with **Next.js + React Three Fiber**.
 
----
+## Highlights
 
-## ✨ Highlights
+- **Fully interactive 3D room** — desk setup, honeycomb wall, plants, PC tower, phone, books, and a Rubik's cube
+- **Day / Night themes** — toggling adjusts the sun, LED strips, screen glow, wall text, and the overall mood of the scene
+- **PBR materials** — normal, roughness, and metalness maps on keycaps, honeycomb wall, desk, floor, and tower
+- **HDRI environment lighting** with soft shadows (PCFSoft) and a monitor light that spills onto the desk
+- **Cinematic post-processing** — SSAO, bloom, depth of field, and film grain, with an adaptive quality guard for weaker GPUs
+- **Performance-first** — Draco-compressed geometry, KTX2 GPU-native textures, LODs on the plant and PC tower
+- **Subtle sound design** on interactions
 
-- 🖥️ **Fully interactive 3D room** — desk setup, honeycomb wall, plants, PC tower, phone, books & a Rubik's cube
-- 🌗 **Day / Night themes** — toggling changes the sun, LED strips, screen glow, wall-text colors and the whole mood of the room
-- 💎 **PBR materials** — normal / roughness / metalness maps on keycaps, honeycomb wall, desk, floor and tower
-- 🌍 **HDRI environment lighting** + soft shadows (PCFSoft) + a monitor light that spills onto the desk
-- 🎬 **Cinematic post-processing** — SSAO, bloom, depth of field and film grain, with an adaptive quality guard for weaker GPUs
-- ⚡ **Performance-first** — Draco-compressed geometry, KTX2 GPU-native textures, LODs on the plant & PC tower
-- 🔊 Subtle sound design on interactions
+## Tech Stack
 
-## 🧰 Tech Stack
+| Layer         | Tech                                                       |
+| ------------- | ---------------------------------------------------------- |
+| Framework     | Next.js 16 (App Router) · React 19 · TypeScript            |
+| 3D            | Three.js · React Three Fiber · custom postprocessing chain |
+| Styling       | Tailwind CSS 4 · shadcn/ui                                 |
+| Assets        | GLB (Draco) · KTX2/Basis · HDRI (RGBE)                     |
+| DB (optional) | Prisma + SQLite                                            |
 
-| Layer      | Tech                                                        |
-| ---------- | ----------------------------------------------------------- |
-| Framework  | Next.js 16 (App Router) · React 19 · TypeScript             |
-| 3D         | Three.js · React Three Fiber · custom postprocessing chain  |
-| Styling    | Tailwind CSS 4 · shadcn/ui                                  |
-| Assets     | GLB (Draco) · KTX2/Basis · HDRI (RGBE)                      |
-| DB (optional) | Prisma + SQLite                                          |
+## Getting Started
 
-## 🚀 Run It Locally
-
-You need **Node.js 20+** (or [Bun](https://bun.sh)) installed.
+Requires **Node.js 20+** (or [Bun](https://bun.sh)).
 
 ```bash
 git clone https://github.com/navairgap/3d-portfolio.git
 cd 3d-portfolio
 npm install     # or: bun install / pnpm install
-npm run dev     # or: bun run dev
+npm run dev
 ```
 
-Then open **http://localhost:3000** — that's it. No environment variables are required for the 3D site.
+Open **http://localhost:3000**. No environment variables are required for the 3D site.
 
-> Optional: the project ships with a Prisma schema. If you want to use it, copy `.env.example` to `.env` first, then run `npm run db:push`.
+> Optional: the project ships with a Prisma schema. To use it, copy `.env.example` to `.env` and run `npm run db:push`.
 
-## 📜 Scripts
+## Scripts
 
-| Command           | What it does                          |
-| ----------------- | ------------------------------------- |
-| `npm run dev`     | Start the dev server (port 3000)      |
-| `npm run build`   | Create a production build             |
-| `npm run start`   | Serve the production build            |
-| `npm run lint`    | Run ESLint                            |
-| `npm run db:push` | Push the Prisma schema to SQLite      |
+| Command           | Description                      |
+| ----------------- | -------------------------------- |
+| `npm run dev`     | Start the dev server (port 3000) |
+| `npm run build`   | Create a production build        |
+| `npm run start`   | Serve the production build       |
+| `npm run lint`    | Run ESLint                       |
+| `npm run db:push` | Push the Prisma schema to SQLite |
 
-## ▲ Deploy to Vercel
-
-1. Sign up at [vercel.com](https://vercel.com) — easiest with **Continue with GitHub**
-2. **Add New… → Project** → import this repository
-3. Keep every default (Next.js is auto-detected) → **Deploy**
-4. Your site goes live at `https://<project-name>.vercel.app`
-
-No environment variables needed. After that, every `git push` to `main` re-deploys automatically.
-
-## 🗂 Project Structure
+## Project Structure
 
 ```
 src/
   app/                  # Next.js App Router — single-page entry
   components/
-    portfolio/          # The whole 3D experience
+    portfolio/          # The 3D experience
       PortfolioExperience.tsx   # scene, lighting, camera, post-processing
-      gamingKeyboard.ts         # keyboard model + PBR keycaps
-      hexaWall.ts               # honeycomb wall w/ normal maps
-      phoneScreen.ts            # in-world phone UI
-      bookPage.ts               # book pages & covers
-      rubiksCube.ts             # Rubik's cube
-      floor.ts / carpet.ts      # floor + LED strips, rug
-      pbr.ts                    # procedural normal/roughness map generators
-      sounds.ts                 # interaction sounds
+      gamingKeyboard.tsx        # keyboard model + PBR keycaps
+      hexaWall.tsx              # honeycomb wall with normal maps
+      phoneScreen.tsx           # in-world phone UI
+      bookPage.tsx              # book pages & covers
+      rubiksCube.tsx            # Rubik's cube
+      floor.tsx / carpet.tsx    # floor + LED strips, rug
+      pbr.tsx                   # procedural normal/roughness map generators
+      sounds.tsx                # interaction sounds
 public/
   models/               # room.glb (Draco-compressed)
   textures/             # HDRI, KTX2, book covers, project art
@@ -86,12 +73,12 @@ prisma/
   schema.prisma         # optional database schema
 ```
 
-## 🙏 Credits
+## Credits
 
 - HDRI environment map from the [three.js examples](https://threejs.org) collection
-- Geometry & texture compression: Google [Draco](https://github.com/google/draco) + Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) (transcoders bundled)
-- Built with [Three.js](https://threejs.org), [React Three Fiber](https://docs.pmnd.rs/react-three-fiber), [Next.js](https://nextjs.org) & [shadcn/ui](https://ui.shadcn.com)
+- Geometry & texture compression: Google [Draco](https://github.com/google/draco) and Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) — transcoders bundled
+- Built with [Three.js](https://threejs.org), [React Three Fiber](https://docs.pmnd.rs/react-three-fiber), [Next.js](https://nextjs.org), and [shadcn/ui](https://ui.shadcn.com)
 
 ---
 
-© NAVAIRGAP — security researcher & 3D tinkerer
+© NAVAIRGAP — security researcher & backend developer
