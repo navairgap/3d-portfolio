@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { roundedRugGeometry } from './carpet';
+import { roundRectPath } from './pbr';
 
 /**
  * The room floor, restyled:
@@ -127,7 +128,7 @@ export function createFloorLed(w = 0.95, d = 0.95): FloorLed {
 
   const rrPath = (inset: number, r: number): void => {
     x.beginPath();
-    x.roundRect(inset, inset, LED - inset * 2, LED - inset * 2, r);
+    roundRectPath(x, inset, inset, LED - inset * 2, LED - inset * 2, r);
   };
   const hexPath = (cx: number, cy: number, r: number): void => {
     x.beginPath();

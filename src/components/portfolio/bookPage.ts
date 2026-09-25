@@ -190,10 +190,13 @@ export function createBookPage(): {
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(W * SCALE);
   canvas.height = Math.round(H * SCALE);
-  const c = canvas.getContext('2d');
-  if (!c) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
     throw new Error('2D canvas context unavailable');
   }
+  // non-nullable alias — nested helper functions read `c` and TypeScript
+  // does not propagate the guard's narrowing into hoisted declarations
+  const c = ctx;
   // supersample: keep authoring in the 1190x1684 design grid
   c.scale(SCALE, SCALE);
 

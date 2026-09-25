@@ -621,7 +621,9 @@ export default function PortfolioExperience() {
       );
       composer.addPass(bloomPass);
       // film grain — subtle animated monochrome noise, no scanlines
-      filmPass = new FilmPass(0.05, 0.0, 0.0, false);
+      // (the runtime signature takes a boolean for grayscale; the bundled
+      // @types/three declares `number`, so pass 0 to satisfy both)
+      filmPass = new FilmPass(0.05, 0.0, 0.0, 0);
       composer.addPass(filmPass);
       composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       composer.setSize(window.innerWidth, window.innerHeight);
@@ -1512,8 +1514,9 @@ export default function PortfolioExperience() {
     } | null {
       if (!mobileScreen) return null;
       mobileScreen.updateWorldMatrix(true, false);
-      const pos = mobileScreen.geometry.attributes.position;
-      const uv = mobileScreen.geometry.attributes.uv;
+      const pos = mobileScreen.geometry.attributes
+        .position as THREE.BufferAttribute;
+      const uv = mobileScreen.geometry.attributes.uv as THREE.BufferAttribute;
       if (!pos || !uv || pos.count < 4) return null;
 
       // find the vertices closest to the uv corners to recover the quad's
@@ -1548,7 +1551,7 @@ export default function PortfolioExperience() {
           pos.getX(i),
           pos.getY(i),
           pos.getZ(i)
-        ).applyMatrix4(mobileScreen.matrixWorld);
+        ).applyMatrix4(mobileScreen!.matrixWorld);
       const uVec = new THREE.Vector3().subVectors(
         vertexWorld(i10),
         vertexWorld(i00)
@@ -1924,6 +1927,7 @@ export default function PortfolioExperience() {
 
       // tip it back and sip
       guardedDelay(1.2, () => {
+        if (!mug) return;
         playCoffeeSlurp();
         gsap.to(mug.quaternion, {
           x: tiltQuat.x,
@@ -1947,8 +1951,10 @@ export default function PortfolioExperience() {
         });
       }
 
-      // tip back down and return to the desk
+      // tip back down and return to the desk (delayed closures run
+      // later, so re-check the props — TS can't narrow across closures)
       guardedDelay(3.2, () => {
+        if (!mug || !mugRestQuat) return;
         gsap.to(mug.quaternion, {
           x: mugRestQuat.x,
           y: mugRestQuat.y,
@@ -1959,6 +1965,7 @@ export default function PortfolioExperience() {
         });
       });
       guardedDelay(3.6, () => {
+        if (!mug || !mugRestPos) return;
         gsap.to(mug.position, {
           x: mugRestPos.x,
           y: mugRestPos.y,
@@ -2635,9 +2642,13 @@ export default function PortfolioExperience() {
                 : [mm.material];
               mats.forEach((raw) => {
                 const std = raw as THREE.MeshStandardMaterial;
+                // @types/three r149 omits isMeshPhysicalMaterial on the
+                // physical material type (the runtime flag exists) — read
+                // it through a structural cast
                 if (
                   std.isMeshStandardMaterial &&
-                  !std.isMeshPhysicalMaterial &&
+                  !(raw as unknown as { isMeshPhysicalMaterial?: boolean })
+                    .isMeshPhysicalMaterial &&
                   raw.name !== 'Light' &&
                   raw.name !== 'Red Glow'
                 ) {
@@ -2778,10 +2789,29 @@ export default function PortfolioExperience() {
         // responsive scaling is applied, so the proportions stay exact)
         if (rubikOriginal && rubikOriginal.parent) {
           const cubeParent = rubikOriginal.parent;
+          // Measure the prop UNROTATED: room.glb's "Rubik Cube" is a hand-
+          // modelled, slightly flat cube resting on the desk turned ~33°
+          // about Y, so a plain setFromObject() box is inflated by that
+          // rotation (0.0580 instead of the real 0.0419 edge). Sizing the
+          // replacement from the rotated box made the cube ~39% too big and
+          // sank its bottom face 0.012 through the desk — the lower row of
+          // cubies was buried in the tabletop. Zeroing the rotation for the
+          // measurement only gives its true footprint/height, and the box's
+          // min.y is exactly the desk surface the prop rested on.
+          const savedQuat = rubikOriginal.quaternion.clone();
+          rubikOriginal.quaternion.identity();
+          rubikOriginal.updateWorldMatrix(false, false);
           const cubeBox = new THREE.Box3().setFromObject(rubikOriginal);
+          rubikOriginal.quaternion.copy(savedQuat);
+          rubikOriginal.updateWorldMatrix(false, false);
+
           const cubeSize = cubeBox.getSize(new THREE.Vector3());
           const edge = Math.max(cubeSize.x, cubeSize.y, cubeSize.z);
           const cubeCenter = cubeBox.getCenter(new THREE.Vector3());
+          // rest the cube ON the desk instead of centred on the prop: a
+          // perfect cube that kept the flat prop's centre would still poke
+          // through the tabletop
+          cubeCenter.y = cubeBox.min.y + edge / 2;
           const localCenter = cubeParent.worldToLocal(cubeCenter.clone());
           cube = createRubiksCube(
             cubeParent,
@@ -2814,7 +2844,7 @@ export default function PortfolioExperience() {
           const isCubePart = (o: THREE.Object3D | null): boolean => {
             let cur: THREE.Object3D | null = o;
             while (cur) {
-              if (cur === cube.group) return true;
+              if (cur === cube!.group) return true;
               cur = cur.parent;
             }
             return false;

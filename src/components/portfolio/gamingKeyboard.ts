@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import {
   heightCanvasToNormalTexture,
   createNoiseRoughnessMap,
+  roundRectPath,
 } from './pbr';
 
 /**
@@ -291,7 +292,8 @@ function buildNormalAtlas(): THREE.CanvasTexture {
         const t = s / steps;
         const inset = margin + bevel * Math.pow(t, 1.6);
         c.beginPath();
-        c.roundRect(
+        roundRectPath(
+          c,
           x0 + inset,
           y0 + inset,
           CELL - inset * 2,
@@ -338,7 +340,8 @@ const TAPER = 0.76;
 
 function taperedBoxGeo(w: number, h: number, d: number): THREE.BoxGeometry {
   const geo = new THREE.BoxGeometry(w, h, d);
-  const pos = geo.attributes.position;
+  // BoxGeometry always owns a plain BufferAttribute — cast for getX/setX
+  const pos = geo.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
     if (pos.getY(i) > 0) {
       pos.setX(i, pos.getX(i) * TAPER);
@@ -402,8 +405,8 @@ export function createGamingKeyboard(deck: THREE.Mesh): GamingKeyboard {
     keyZ: number,
     rect: CellRect
   ): void {
-    const pos = geo.attributes.position;
-    const uv = geo.attributes.uv;
+    const pos = geo.attributes.position as THREE.BufferAttribute;
+    const uv = geo.attributes.uv as THREE.BufferAttribute;
     // the tapered top face only spans TAPER x the full footprint
     const halfX = (capX * TAPER) / 2;
     const halfZ = (keyZ * TAPER) / 2;

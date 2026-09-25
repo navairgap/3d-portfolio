@@ -84,6 +84,32 @@ export function heightCanvasToNormalTexture(
 }
 
 /**
+ * Cross-browser rounded-rectangle path. `ctx.roundRect` needs Chrome 99+ /
+ * Safari 16+ / Firefox 112+; this falls back to the classic arcTo recipe so
+ * the procedural textures render on older browsers too.
+ */
+export function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number
+): void {
+  const rad = Math.min(r, w / 2, h / 2);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, w, h, rad);
+    return;
+  }
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+/**
  * Multi-octave grayscale micro-noise, ~0.72 mean with blotchy meso-variance
  * and fine speckle. Shared instance across materials — see header.
  */

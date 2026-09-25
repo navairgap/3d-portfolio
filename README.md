@@ -2,7 +2,7 @@
 
 An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — click the monitor, peek at the keyboard, open the books, spin the Rubik's cube, and answer the phone.
 
-Built with **Next.js + React Three Fiber**.
+Built with **Next.js + Three.js**.
 
 ## Highlights
 
@@ -19,23 +19,25 @@ Built with **Next.js + React Three Fiber**.
 | Layer         | Tech                                                       |
 | ------------- | ---------------------------------------------------------- |
 | Framework     | Next.js 16 (App Router) · React 19 · TypeScript            |
-| 3D            | Three.js · React Three Fiber · custom postprocessing chain |
+| 3D            | Three.js · custom postprocessing chain (SSAO, bloom, DoF, grain) |
 | Styling       | Tailwind CSS 4 · shadcn/ui                                 |
 | Assets        | GLB (Draco) · KTX2/Basis · HDRI (RGBE)                     |
 | DB (optional) | Prisma + SQLite                                            |
 
 ## Getting Started
 
-Requires **Node.js 20+** (or [Bun](https://bun.sh)).
+Requires **Node.js 20+**.
 
 ```bash
 git clone https://github.com/navairgap/3d-portfolio.git
 cd 3d-portfolio
-npm install     # or: bun install / pnpm install
+npm install
 npm run dev
 ```
 
 Open **http://localhost:3000**. No environment variables are required for the 3D site.
+
+`npm install` automatically runs `prisma generate` (a `postinstall` script), so the project builds out of the box on any machine. Dependencies are locked via `package-lock.json` — use npm.
 
 > Optional: the project ships with a Prisma schema. To use it, copy `.env.example` to `.env` and run `npm run db:push`.
 
@@ -43,11 +45,11 @@ Open **http://localhost:3000**. No environment variables are required for the 3D
 
 | Command           | Description                      |
 | ----------------- | -------------------------------- |
-| `npm run dev`     | Start the dev server (port 3000) |
-| `npm run build`   | Create a production build        |
-| `npm run start`   | Serve the production build       |
-| `npm run lint`    | Run ESLint                       |
-| `npm run db:push` | Push the Prisma schema to SQLite |
+| `npm run dev`     | Start the dev server (port 3000)                     |
+| `npm run build`   | Production build (runs `prisma generate` first)      |
+| `npm run start`   | Serve the production build                           |
+| `npm run lint`    | Run ESLint                                           |
+| `npm run db:push` | Push the Prisma schema to SQLite                     |
 
 ## Project Structure
 
@@ -57,14 +59,17 @@ src/
   components/
     portfolio/          # The 3D experience
       PortfolioExperience.tsx   # scene, lighting, camera, post-processing
-      gamingKeyboard.tsx        # keyboard model + PBR keycaps
-      hexaWall.tsx              # honeycomb wall with normal maps
-      phoneScreen.tsx           # in-world phone UI
-      bookPage.tsx              # book pages & covers
-      rubiksCube.tsx            # Rubik's cube
-      floor.tsx / carpet.tsx    # floor + LED strips, rug
-      pbr.tsx                   # procedural normal/roughness map generators
-      sounds.tsx                # interaction sounds
+      gamingKeyboard.ts         # procedural RGB keycaps + PBR caps
+      hexaWall.ts               # honeycomb wall with normal maps
+      phoneScreen.ts            # in-world phone UI
+      bookPage.ts               # book pages & covers
+      rubiksCube.ts             # Rubik's cube
+      floor.ts / carpet.ts      # floor + LED strips, rug
+      pbr.ts                    # procedural normal/roughness map generators
+      sounds.ts                 # WebAudio-synthesized interaction sounds
+    ui/                   # shadcn/ui primitives
+  hooks/                # shared React hooks
+  lib/                  # utils + optional Prisma client
 public/
   models/               # room.glb (Draco-compressed)
   textures/             # HDRI, KTX2, book covers, project art
@@ -77,7 +82,7 @@ prisma/
 
 - HDRI environment map from the [three.js examples](https://threejs.org) collection
 - Geometry & texture compression: Google [Draco](https://github.com/google/draco) and Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) — transcoders bundled
-- Built with [Three.js](https://threejs.org), [React Three Fiber](https://docs.pmnd.rs/react-three-fiber), [Next.js](https://nextjs.org), and [shadcn/ui](https://ui.shadcn.com)
+- Built with [Three.js](https://threejs.org), [Next.js](https://nextjs.org), and [shadcn/ui](https://ui.shadcn.com)
 
 ---
 

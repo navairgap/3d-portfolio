@@ -167,10 +167,13 @@ export function createPhoneScreen(aspect: number): PhoneScreen {
   const canvas = document.createElement('canvas');
   canvas.width = W * SCALE;
   canvas.height = H * SCALE;
-  const c = canvas.getContext('2d');
-  if (!c) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
     throw new Error('2D canvas context unavailable');
   }
+  // non-nullable alias — nested helper functions read `c` and TypeScript
+  // does not propagate the guard's narrowing into hoisted declarations
+  const c = ctx;
   // draw everything in design units — the canvas itself is 2x for sharpness
   c.scale(SCALE, SCALE);
 

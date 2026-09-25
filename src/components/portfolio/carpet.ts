@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { roundRectPath } from './pbr';
 
 /**
  * A rounded woven rug for the room floor. Geometry: a rounded-rectangle
@@ -102,7 +103,7 @@ function drawCanvasTexture(): HTMLCanvasElement {
   ctx.strokeStyle = '#a6a6a6';
   ctx.lineWidth = 34;
   ctx.beginPath();
-  ctx.roundRect(bandInset, bandInset, TEX - bandInset * 2, TEX - bandInset * 2, Math.max(8, cornerPx - bandInset * 0.85));
+  roundRectPath(ctx, bandInset, bandInset, TEX - bandInset * 2, TEX - bandInset * 2, Math.max(8, cornerPx - bandInset * 0.85));
   ctx.stroke();
 
   // inner hairline
@@ -110,7 +111,7 @@ function drawCanvasTexture(): HTMLCanvasElement {
   ctx.strokeStyle = '#9c9c9c';
   ctx.lineWidth = 7;
   ctx.beginPath();
-  ctx.roundRect(lineInset, lineInset, TEX - lineInset * 2, TEX - lineInset * 2, Math.max(6, cornerPx - lineInset * 0.85));
+  roundRectPath(ctx, lineInset, lineInset, TEX - lineInset * 2, TEX - lineInset * 2, Math.max(6, cornerPx - lineInset * 0.85));
   ctx.stroke();
 
   // corner accents — small diamonds in the border band corners

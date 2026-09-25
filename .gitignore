@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# freebuff agent workspace
+.freebuff/
+
 
 # typescript
 *.tsbuildinfo
