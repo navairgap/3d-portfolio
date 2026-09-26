@@ -1,5 +1,7 @@
 # NAVAIRGAP — 3D Interactive Portfolio
 
+**Live demo → https://3d-portfolio-nav-8975.vercel.app**
+
 An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — click the monitor, peek at the keyboard, open the books, spin the Rubik's cube, and answer the phone.
 
 Built with **Next.js + Three.js**.
