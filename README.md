@@ -89,3 +89,6 @@ prisma/
 ---
 
 © NAVAIRGAP — security researcher & backend developer
+
+---
+maintained · verified 2026-09-30
