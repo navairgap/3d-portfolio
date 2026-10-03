@@ -96,3 +96,9 @@ maintained · verified 2026-09-30
 maintained · verified 2026-10-01
 ---
 maintained · verified 2026-10-02
+
+## Performance notes
+
+- Geometry ships Draco-compressed; textures use KTX2/Basis so GPU memory stays bounded.
+- An adaptive quality guard drops post-processing on weaker GPUs.
+- LODs on the plant and PC tower keep draw calls flat.
