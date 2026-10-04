@@ -102,3 +102,11 @@ maintained · verified 2026-10-02
 - Geometry ships Draco-compressed; textures use KTX2/Basis so GPU memory stays bounded.
 - An adaptive quality guard drops post-processing on weaker GPUs.
 - LODs on the plant and PC tower keep draw calls flat.
+
+## Environment variables
+
+None are required for the 3D site. The optional Prisma integration reads:
+
+| variable | default | purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `file:./db/custom.db` | SQLite path for the demo API routes |
