@@ -110,3 +110,8 @@ None are required for the 3D site. The optional Prisma integration reads:
 | variable | default | purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | `file:./db/custom.db` | SQLite path for the demo API routes |
+
+
+## Accessibility
+
+The 3D scene is decorative — all content is reachable as text. Reduced-motion users get a static render. Keyboard navigation works through the whole site.
