@@ -115,3 +115,15 @@ None are required for the 3D site. The optional Prisma integration reads:
 ## Accessibility
 
 The 3D scene is decorative — all content is reachable as text. Reduced-motion users get a static render. Keyboard navigation works through the whole site.
+
+
+## Installation
+
+```bash
+git clone https://github.com/navairgap/3d-portfolio.git
+cd 3d-portfolio
+npm install
+npm run dev
+```
+
+Node 20+ recommended. `npm run build && npm start` for production.
