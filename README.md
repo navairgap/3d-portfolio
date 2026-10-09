@@ -127,3 +127,8 @@ npm run dev
 ```
 
 Node 20+ recommended. `npm run build && npm start` for production.
+
+
+## Deployment
+
+ships as a static Next build. vercel and netlify both work out of the box; any static host works if you set the framework preset to next.js. the optional prisma layer needs a database — skip it for the pure 3D site.
