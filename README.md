@@ -132,3 +132,9 @@ Node 20+ recommended. `npm run build && npm start` for production.
 ## Deployment
 
 ships as a static Next build. vercel and netlify both work out of the box; any static host works if you set the framework preset to next.js. the optional prisma layer needs a database — skip it for the pure 3D site.
+
+## Upgrading
+
+1. `git pull && npm ci` (regenerates the lockfile cleanly)
+2. if you use the prisma layer: `npx prisma db push`
+3. `npm run build` — the 3D site needs nothing else
