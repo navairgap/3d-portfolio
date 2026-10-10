@@ -138,3 +138,9 @@ ships as a static Next build. vercel and netlify both work out of the box; any s
 1. `git pull && npm ci` (regenerates the lockfile cleanly)
 2. if you use the prisma layer: `npx prisma db push`
 3. `npm run build` — the 3D site needs nothing else
+
+## Upgrading
+
+1. `git pull && npm ci` (regenerates the lockfile cleanly)
+2. if you use the prisma layer: `npx prisma db push`
+3. `npm run build` — the 3D site needs nothing else
