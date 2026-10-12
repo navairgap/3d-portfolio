@@ -148,3 +148,7 @@ ships as a static Next build. vercel and netlify both work out of the box; any s
 ## Repo map
 
 the 3D scene lives in `src/components/portfolio/` — `PortfolioExperience.tsx` owns camera, lights and post-processing; the room props are siblings. `public/` holds the draco models, ktx2 textures and the hdri. prisma is optional and touches nothing in the scene.
+
+## Asset pipeline
+
+blender → gltf export → draco compression (gltf-transform), textures → ktx2/basis, environment → .hdr. the decoders in `public/draco` and `public/ktx2` are what the loader fetches at runtime — keep them next to the models.
