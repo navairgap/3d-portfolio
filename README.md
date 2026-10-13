@@ -152,3 +152,7 @@ the 3D scene lives in `src/components/portfolio/` — `PortfolioExperience.tsx` 
 ## Asset pipeline
 
 blender → gltf export → draco compression (gltf-transform), textures → ktx2/basis, environment → .hdr. the decoders in `public/draco` and `public/ktx2` are what the loader fetches at runtime — keep them next to the models.
+
+## Performance budget
+
+target 60fps on integrated graphics. the costs: SSAO > bloom > shadows; the adaptive guard drops them in that order when frame time slips. texture memory is capped by ktx2 compression.
