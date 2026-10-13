@@ -156,3 +156,7 @@ blender → gltf export → draco compression (gltf-transform), textures → ktx
 ## Performance budget
 
 target 60fps on integrated graphics. the costs: SSAO > bloom > shadows; the adaptive guard drops them in that order when frame time slips. texture memory is capped by ktx2 compression.
+
+## Non-goals
+
+not a game: no physics, no interaction beyond the authored hotspots, no multiplayer. it is a room you visit, not a world you live in.
