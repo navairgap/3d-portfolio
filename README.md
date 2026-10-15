@@ -166,3 +166,7 @@ not a game: no physics, no interaction beyond the authored hotspots, no multipla
 **why Next.js and not Vite?** the project predates the React 19 stable line and wanted SSR metadata per route; with the site now effectively static, Vite would be the honest rewrite — noted, not scheduled.
 
 **can i swap the room model?** the loader takes any glTF; the interaction anchors are named meshes, so a new room means remapping those names in one file.
+
+## Editing
+
+room text and panels are plain strings in the scene components — change, `npm run dev`, ship. the baked lighting only matters if you move the furniture; words are free.
