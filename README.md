@@ -170,3 +170,7 @@ not a game: no physics, no interaction beyond the authored hotspots, no multipla
 ## Editing
 
 room text and panels are plain strings in the scene components — change, `npm run dev`, ship. the baked lighting only matters if you move the furniture; words are free.
+
+## Support
+
+issues with a screenshot of the room and the browser's console output get answered; 'how do i make it mine' gets pointed at the repo map and the license.
