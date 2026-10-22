@@ -174,3 +174,8 @@ room text and panels are plain strings in the scene components — change, `npm 
 ## Support
 
 issues with a screenshot of the room and the browser's console output get answered; 'how do i make it mine' gets pointed at the repo map and the license.
+
+
+## Release sanity checks
+
+Before publishing, verify keyboard navigation, reduced-motion behavior, and the non-WebGL fallback. Dispose of animation frames and observers when scenes unmount so route changes do not leave duplicate loops running.
