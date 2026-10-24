@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://3d-portfolio-nav-8975.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
   title: "NAV — Security Researcher & Backend Developer",
   description:
     "Hello, I'm NAV (navairgap), a defense-first developer from Pune, India. I build passive, local-first security tools like SentinelWiFi, real-time backend systems, and I learn in public — networking, Python, security, C, operating systems. The air gap between attacker and target is my favorite place to stand.",
