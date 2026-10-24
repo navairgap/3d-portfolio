@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://navairgap.github.io"),
+  metadataBase: new URL("https://3d-portfolio-nav-8975.vercel.app"),
   title: "NAV — Security Researcher & Backend Developer",
   description:
     "Hello, I'm NAV (navairgap), a defense-first developer from Pune, India. I build passive, local-first security tools like SentinelWiFi, real-time backend systems, and I learn in public — networking, Python, security, C, operating systems. The air gap between attacker and target is my favorite place to stand.",
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     title: "NAV — Security Researcher & Backend Developer",
     description:
       "Defense-first developer from Pune, India. Passive, local-first security tools and real-time backend systems.",
-    url: "https://navairgap.github.io",
+    url: "https://3d-portfolio-nav-8975.vercel.app",
     siteName: "NAV — 3D Portfolio",
     type: "website",
     images: [{ url: "/images/preview.jpg", width: 1344, height: 768 }],
