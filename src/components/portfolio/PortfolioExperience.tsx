@@ -3801,7 +3801,7 @@ export default function PortfolioExperience() {
       )}
 
       <footer>
-        2025 portfolio — designed &amp; developed by{' '}
+        2026 portfolio — designed &amp; developed by{' '}
         <a href={GITHUB_URL} target="_blank" rel="noreferrer">
           NAV
         </a>{' '}
