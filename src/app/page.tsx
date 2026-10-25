@@ -8,8 +8,13 @@ const PortfolioExperience = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div id="loader-wrapper">
-        <div className="loader" />
+      <div
+        id="loader-wrapper"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading 3D portfolio"
+      >
+        <div className="loader" aria-hidden="true" />
       </div>
     ),
   }
