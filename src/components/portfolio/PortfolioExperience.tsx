@@ -3724,6 +3724,7 @@ export default function PortfolioExperience() {
             type="button"
             onClick={() => worldRef.current?.goToPhone()}
             title="Pick up the phone — my contacts"
+            aria-label="Pick up the phone — my contacts"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -3740,6 +3741,7 @@ export default function PortfolioExperience() {
             type="button"
             onClick={() => worldRef.current?.goToKeyboardPeek()}
             title="Watch the keyboard type"
+            aria-label="Watch the keyboard type"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -3756,6 +3758,7 @@ export default function PortfolioExperience() {
             type="button"
             onClick={() => worldRef.current?.toggleLights()}
             title="Toggle the room lights"
+            aria-label="Toggle the room lights"
             aria-pressed={!lightsOn}
           >
             <svg
@@ -3773,6 +3776,7 @@ export default function PortfolioExperience() {
             type="button"
             onClick={() => worldRef.current?.resetCamera()}
             title="Reset the view"
+            aria-label="Reset the view"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
