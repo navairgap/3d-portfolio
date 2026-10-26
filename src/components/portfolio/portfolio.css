@@ -770,3 +770,15 @@ footer a {
   outline-offset: 2px;
   border-radius: 6px;
 }
+
+/* Keep keyboard focus discoverable in Windows High Contrast / forced colors. */
+@media (forced-colors: active) {
+  #enter-btn:focus-visible,
+  #sound-toggle:focus-visible,
+  .main-nav a:focus-visible,
+  .side-nav a:focus-visible,
+  .room-controls button:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 3px;
+  }
+}
