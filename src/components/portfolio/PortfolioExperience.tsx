@@ -87,7 +87,7 @@ const PROJECTS: ProjectDef[] = [
   },
   {
     image: '/textures/project-airgapos.png',
-    url: 'https://github.com/navairgap/airgap-os',
+    url: 'https://github.com/navairgap/portfolio-os',
   },
   {
     image: '/textures/project-portwarden.png',
