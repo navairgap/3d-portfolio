@@ -317,6 +317,7 @@ export default function PortfolioExperience() {
     // the render loop like the honeycomb)
     const floorLedState = { level: 0 };
     const mobileQuery = window.matchMedia('(max-width: 992px)');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     // evaluated live so rotating a phone / resizing re-frames correctly
     const isMobileNow = () => mobileQuery.matches;
 
@@ -2154,6 +2155,13 @@ export default function PortfolioExperience() {
       hasEntered = true;
       camSeq++;
       killCameraTweens();
+      if (prefersReducedMotion.matches) {
+        camera.position.set(defaultCameraPos.x, defaultCameraPos.y, defaultCameraPos.z);
+        camera.rotation.set(defaultCameraRot.x, defaultCameraRot.y, defaultCameraRot.z);
+        videoEl?.pause();
+        enableOrbitControls();
+        return;
+      }
       videoEl?.play().catch(() => {});
       gsap.to(camera.position, {
         ...defaultCameraPos,
