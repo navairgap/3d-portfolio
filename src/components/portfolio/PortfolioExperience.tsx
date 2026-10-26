@@ -729,7 +729,7 @@ export default function PortfolioExperience() {
 
       if (keyboard) {
         keyboard.update(dt, elapsed, theme === 'dark');
-        if (hasEntered) {
+        if (hasEntered && !prefersReducedMotion.matches) {
           // idle "ghost typing" so the desk feels alive
           idleTypeTimer -= dt;
           if (idleTypeTimer <= 0) {
@@ -762,7 +762,7 @@ export default function PortfolioExperience() {
       }
 
       // drifting dust motes (night mode only — skip the work when hidden)
-      if (dust.visible) {
+      if (dust.visible && !prefersReducedMotion.matches) {
         const dpos = dustGeo.attributes.position as THREE.BufferAttribute;
         for (let i = 0; i < DUST_COUNT; i++) {
           const t = elapsed * 0.12 + dustPhase[i];
@@ -779,7 +779,9 @@ export default function PortfolioExperience() {
 
       // slow orbit after a while without input (any input pauses it)
       if (controls.enabled) {
-        if (
+        if (prefersReducedMotion.matches) {
+          controls.autoRotate = false;
+        } else if (
           hasEntered &&
           !phoneViewOpen &&
           performance.now() - lastInteraction > 14000
