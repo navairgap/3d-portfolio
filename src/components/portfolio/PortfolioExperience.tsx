@@ -2211,7 +2211,7 @@ export default function PortfolioExperience() {
           if (hit && hit.uv && phone) {
             const url = phone.hitTest(hit.uv.x, hit.uv.y);
             if (url) {
-              window.open(url, '_blank');
+              window.open(url, '_blank', 'noopener,noreferrer');
               return;
             }
           }
@@ -2236,7 +2236,7 @@ export default function PortfolioExperience() {
 
         if (name === 'project') {
           const url = intersect.object.userData?.url as string | undefined;
-          if (url) window.open(url, '_blank');
+          if (url) window.open(url, '_blank', 'noopener,noreferrer');
         } else if (name === 'CPU') {
           togglePcPower();
         } else if (name === 'Coffe') {
