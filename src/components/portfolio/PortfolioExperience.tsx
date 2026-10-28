@@ -3497,7 +3497,7 @@ export default function PortfolioExperience() {
               </button>
             </li>
             <li>
-              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+              <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -3595,7 +3595,7 @@ export default function PortfolioExperience() {
                   <a
                     href={GITHUB_URL}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     id="contact-email"
                   >
                     <span>github.com/navairgap</span>
@@ -3610,7 +3610,7 @@ export default function PortfolioExperience() {
                       <a
                         href={GITHUB_URL}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         aria-label="GitHub profile"
                       >
                         <svg
@@ -3628,7 +3628,7 @@ export default function PortfolioExperience() {
                       <a
                         href={SITE_URL}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         aria-label="Portfolio website"
                       >
                         <svg
@@ -3646,7 +3646,7 @@ export default function PortfolioExperience() {
                       <a
                         href="https://github.com/navairgap?tab=stars"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                         aria-label="Starred repositories"
                       >
                         <svg
@@ -3812,14 +3812,14 @@ export default function PortfolioExperience() {
 
       <footer>
         2026 portfolio — designed &amp; developed by{' '}
-        <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+        <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
           NAV
         </a>{' '}
         · 3D concept by{' '}
         <a
           href="https://github.com/sushilthapa98/3d-portfolio"
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
         >
           Sushil Thapa
         </a>
