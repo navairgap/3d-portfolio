@@ -114,7 +114,7 @@ None are required for the 3D site. The optional Prisma integration reads:
 
 ## Accessibility
 
-The 3D scene is decorative — all content is reachable as text. Reduced-motion users get a static render. Keyboard navigation works through the whole site.
+The 3D scene is decorative — all content is reachable as text. Reduced-motion users get a static render. Browsers that cannot create a WebGL context receive a visible fallback and can still open the project links. Keyboard navigation works through the whole site.
 
 
 ## Installation

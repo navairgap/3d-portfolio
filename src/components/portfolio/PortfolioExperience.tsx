@@ -209,6 +209,7 @@ export default function PortfolioExperience() {
   const [hintVisible, setHintVisible] = useState(false);
   const [soundOn, setSoundOn] = useState(false);
   const [lightsOn, setLightsOn] = useState(true);
+  const [webglUnavailable, setWebglUnavailable] = useState(false);
 
   // Close contact dropdown when clicking outside
   useEffect(() => {
@@ -354,7 +355,16 @@ export default function PortfolioExperience() {
     const canvas = document.createElement('canvas');
     canvas.className = 'experience-canvas';
     container.appendChild(canvas);
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    } catch {
+      // The textual portfolio must remain usable when WebGL is unavailable.
+      canvas.remove();
+      setWebglUnavailable(true);
+      setLoaderGone(true);
+      return () => canvas.remove();
+    }
     renderer.setSize(window.innerWidth, window.innerHeight);
     // cap raised from 1.75 — on DPR-3 phones the canvas used to be
     // upscaled ~1.7x by the compositor, which read as a blurred scene
@@ -3398,6 +3408,18 @@ export default function PortfolioExperience() {
   return (
     <>
       <div className="experience" ref={containerRef} />
+      {webglUnavailable && (
+        <section className="webgl-fallback" role="status" aria-live="polite">
+          <h2>3D scene unavailable</h2>
+          <p>
+            This browser or device could not create a WebGL context. The
+            portfolio links and project information remain available.
+          </p>
+          <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
+            Open GitHub profile
+          </a>
+        </section>
+      )}
       <div className="vignette" aria-hidden="true" />
 
       <div
@@ -3407,7 +3429,7 @@ export default function PortfolioExperience() {
         aria-hidden="true"
       />
 
-      {!loaderGone && (
+      {!loaderGone && !webglUnavailable && (
         <div
           id="loader-wrapper"
           className={entered ? 'loader-wrapper--leaving' : ''}
@@ -3728,7 +3750,7 @@ export default function PortfolioExperience() {
         </section>
       </main>
 
-      {loaderGone && (
+      {loaderGone && !webglUnavailable && (
         <nav className="room-controls" aria-label="Room quick actions">
           <button
             type="button"

@@ -782,3 +782,42 @@ footer a {
     outline-offset: 3px;
   }
 }
+
+
+/* Keep the information layer usable when the browser cannot create WebGL. */
+.webgl-fallback {
+  position: fixed;
+  z-index: 20;
+  top: 50%;
+  left: 50%;
+  width: min(34rem, calc(100vw - 32px));
+  padding: 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(240, 128, 128, 0.35);
+  border-radius: 18px;
+  background: rgba(15, 18, 24, 0.96);
+  color: #fff;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+}
+
+.webgl-fallback h2 {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.webgl-fallback p {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.webgl-fallback a {
+  color: #ffaaaa;
+  font-weight: 600;
+}
+
+.webgl-fallback a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
