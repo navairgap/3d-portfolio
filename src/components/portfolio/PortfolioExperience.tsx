@@ -228,6 +228,7 @@ export default function PortfolioExperience() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    let effectActive = true;
 
     // headless/throttled rAF can stretch gsap timelines — keep them real-time
     gsap.ticker.lagSmoothing(false);
@@ -361,9 +362,15 @@ export default function PortfolioExperience() {
     } catch {
       // The textual portfolio must remain usable when WebGL is unavailable.
       canvas.remove();
-      setWebglUnavailable(true);
-      setLoaderGone(true);
-      return () => canvas.remove();
+      // Defer the fallback state update until after effect setup completes.
+      // The active flag prevents an update if the component unmounts first.
+      requestAnimationFrame(() => {
+        if (effectActive) setWebglUnavailable(true);
+      });
+      return () => {
+        effectActive = false;
+        canvas.remove();
+      };
     }
     renderer.setSize(window.innerWidth, window.innerHeight);
     // cap raised from 1.75 — on DPR-3 phones the canvas used to be
@@ -3331,6 +3338,7 @@ export default function PortfolioExperience() {
 
     // CLEANUP
     return () => {
+      effectActive = false;
       worldDisposed = true;
       cancelAnimationFrame(rafId);
       videoEl?.pause();
