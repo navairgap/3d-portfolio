@@ -105,6 +105,14 @@ const PROJECTS: ProjectDef[] = [
     image: '/textures/project-portwarden.png',
     url: 'https://github.com/navairgap/portwarden',
   },
+  {
+    image: '/textures/project-sentineldns.png',
+    url: 'https://github.com/navairgap/sentinel-dns',
+  },
+  {
+    image: '/textures/project-tinykv.png',
+    url: 'https://github.com/navairgap/tinykv',
+  },
 ];
 
 const CLIP_NAMES = [
@@ -1589,11 +1597,14 @@ export default function PortfolioExperience() {
       const FRAME_PLANE_H = ART_H / (win.v1 - win.v0);
 
       projects.forEach((project, i) => {
-        // 2x2 gallery — the old i%3 column math double-booked column 1
-        // row 0, stacking banter and AirgapOS on the exact same spot
-        const colIndex = i % 2;
-        const rowIndex = Math.floor(i / 2);
-        const cx = 0.3 + 0.8 * colIndex;
+        // 3x2 gallery — six framed prints, still inside the 0.8 layout
+        // pitch so neighbours never overlap. The grid sits right-of-center
+        // because the back wall's left corner ends at x≈-0.2 (verified on
+        // the model) — a symmetric grid would hang its left column past
+        // the corner into the adjacent wall
+        const colIndex = i % 3;
+        const rowIndex = Math.floor(i / 3);
+        const cx = 0.27 + 0.8 * colIndex;
         const cy = 1 - rowIndex * 0.5;
 
         // the artwork keeps the classic 16:9 plane the layout was tuned
@@ -2552,14 +2563,19 @@ export default function PortfolioExperience() {
         // whole gallery sideways in landscape/desktop windows under the
         // 992px breakpoint and made the wall read as a diagonal mess.
         // The upright pose works at any aspect: the wall is framed by
-        // moving the camera, not by rolling it.
-        projectsCameraPos = { x: 0.72, y: 0.62, z: 0.62 };
+        // moving the camera, not by rolling it. x sits on the 3x2 grid's
+        // center (1.07) plus the 0.1-yaw offset so phones get the middle
+        // column head-on.
+        projectsCameraPos = { x: 1.25, y: 0.62, z: 0.62 };
         projectsCameraRot = { x: 0.03, y: 0.1, z: 0 };
         controls.maxDistance = 1.5;
         controls.maxAzimuthAngle = Math.PI * 0.75;
       } else {
-        projectsCameraPos = { x: 1, y: 0.45, z: 0.01 };
-        projectsCameraRot = { x: 0.05, y: 0.05, z: 0 };
+        // framed for the 3x2 gallery: camera on the grid's axis (center
+        // x 1.07 + the 0.05-yaw offset) with a slight up-tilt so both
+        // rows sit centered instead of crowding the top edge
+        projectsCameraPos = { x: 1.13, y: 0.45, z: 0.01 };
+        projectsCameraRot = { x: 0.12, y: 0.05, z: 0 };
         controls.maxDistance = 1.6;
         controls.maxAzimuthAngle = Math.PI * 0.78;
       }
@@ -2732,6 +2748,25 @@ export default function PortfolioExperience() {
                   map: bookCoverTexture,
                   roughness: 0.55,
                 });
+                // One map serves both faces: the front (closed book on the
+                // desk) shows it as-authored, but the back (the inside of
+                // the open cover in the About view) would render it
+                // mirror-written. Flip U on back faces so the upright
+                // canvas reads correctly from either side. Mirrors the
+                // r149 map_fragment chunk it replaces, plus the UV flip.
+                bookCoverMat.onBeforeCompile = (shader) => {
+                  shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <map_fragment>',
+                    [
+                      '#ifdef USE_MAP',
+                      '\tvec2 coverUv = vUv;',
+                      '\tif ( !gl_FrontFacing ) coverUv.x = 1.0 - coverUv.x;',
+                      '\tvec4 sampledDiffuseColor = texture2D( map, coverUv );',
+                      '\tdiffuseColor *= sampledDiffuseColor;',
+                      '#endif',
+                    ].join('\n')
+                  );
+                };
                 innerMesh.material = bookCoverMat;
                 // registered BEFORE the room-wide env pass with a LOW
                 // boost: at night the studio environment would otherwise

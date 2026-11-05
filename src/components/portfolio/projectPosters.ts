@@ -19,7 +19,13 @@ import { roundRectPath } from './pbr';
 
 export interface PosterSpec {
   /** one-word project key */
-  key: 'sentinelwifi' | 'banter' | 'airgapos' | 'portwarden';
+  key:
+    | 'sentinelwifi'
+    | 'banter'
+    | 'portfolioos'
+    | 'portwarden'
+    | 'sentineldns'
+    | 'tinykv';
   title: string;
   subtitle: string;
   accent: string;
@@ -45,9 +51,9 @@ export const POSTER_SPECS: PosterSpec[] = [
     paper: '#12100b',
   },
   {
-    key: 'airgapos',
-    title: 'Airgap OS',
-    subtitle: 'Air-gapped toolkit · live USB',
+    key: 'portfolioos',
+    title: 'Portfolio OS',
+    subtitle: 'Browser Linux desktop · 13 apps',
     accent: '#53c7ff',
     ink: '#0a1016',
     paper: '#0a0f15',
@@ -59,6 +65,22 @@ export const POSTER_SPECS: PosterSpec[] = [
     accent: '#ff7ab8',
     ink: '#140b11',
     paper: '#120a0f',
+  },
+  {
+    key: 'sentineldns',
+    title: 'SentinelDNS',
+    subtitle: 'Passive DNS logger · Rust',
+    accent: '#2dd4bf',
+    ink: '#0a1412',
+    paper: '#091210',
+  },
+  {
+    key: 'tinykv',
+    title: 'TinyKV',
+    subtitle: 'Key-value store · C + LRU',
+    accent: '#ff6b6b',
+    ink: '#160b0b',
+    paper: '#140a0a',
   },
 ];
 
@@ -255,14 +277,15 @@ function drawBanter(x: CanvasRenderingContext2D, spec: PosterSpec): void {
   x.fillText('message #general — 1.2k peers online', 108, my + 45);
 }
 
-function drawAirgapos(x: CanvasRenderingContext2D, spec: PosterSpec): void {
-  // boot log, real lines only
+function drawPortfolioos(x: CanvasRenderingContext2D, spec: PosterSpec): void {
+  // boot log — the real facts of the repo: window manager, workspaces,
+  // 13 apps, React + TypeScript
   const lines: [string, string][] = [
-    ['[ ok ]', 'mounted /dev/usb0 (read-only)'],
-    ['[ ok ]', 'loaded packetcraft drivers'],
-    ['[ ok ]', 'rfkill: radios HARD-OFF'],
-    ['[ ok ]', 'keyscrambler: ephemeral keys'],
-    ['[ .. ]', 'handshake vault unlocked'],
+    ['[ ok ]', 'window manager online'],
+    ['[ ok ]', 'workspaces ×4 mounted'],
+    ['[ ok ]', '13 apps linked'],
+    ['[ ok ]', 'shell: React + TypeScript'],
+    ['[ .. ]', 'guest session starting'],
   ];
   let ly = 452;
   x.font = '600 30px "Poppins", sans-serif';
@@ -278,7 +301,7 @@ function drawAirgapos(x: CanvasRenderingContext2D, spec: PosterSpec): void {
   x.fillRect(84, ly + 4, 26, 40);
   x.font = '600 30px "Poppins", sans-serif';
   x.fillStyle = '#e6edf3';
-  x.fillText('airgap@live:~#_', 130, ly + 36);
+  x.fillText('nav@os:~#_', 130, ly + 36);
 }
 
 function drawPortwarden(x: CanvasRenderingContext2D, spec: PosterSpec): void {
@@ -313,14 +336,99 @@ function drawPortwarden(x: CanvasRenderingContext2D, spec: PosterSpec): void {
   x.fillText('packets / sec — last 60s', 76, 724);
 }
 
+function drawSentineldns(x: CanvasRenderingContext2D, spec: PosterSpec): void {
+  // left: live query log — record chip + client → domain + verdict
+  const queries: [string, string, string][] = [
+    ['A', 'router.lan → ads.example.com', 'BLOCKED'],
+    ['AAAA', 'laptop.lan → home-assistant.io', 'PASSED'],
+    ['TXT', 'phone.lan → api.telemetry.dev', 'FLAGGED'],
+  ];
+  let py = 442;
+  queries.forEach(([rtype, path, verdict]) => {
+    panel(x, 76, py, 700, 56, 10, '#151a21', '#232b34', 2);
+    const chipW = rtype.length * 17 + 28;
+    panel(
+      x,
+      96,
+      py + 10,
+      chipW,
+      36,
+      18,
+      'rgba(45, 212, 191, 0.16)',
+      spec.accent,
+      2
+    );
+    x.font = '700 22px "Poppins", sans-serif';
+    x.fillStyle = spec.accent;
+    x.textBaseline = 'middle';
+    x.fillText(rtype, 110, py + 29);
+    x.font = '500 24px "Poppins", sans-serif';
+    x.fillStyle = '#c9d1d9';
+    x.fillText(path, 110 + chipW + 18, py + 29);
+    x.textAlign = 'right';
+    x.fillStyle = '#8b949e';
+    x.fillText(verdict, 756, py + 29);
+    x.textAlign = 'left';
+    py += 66;
+  });
+  // right: top queried domains — labelled bars
+  x.font = '600 24px "Poppins", sans-serif';
+  x.fillStyle = '#8b949e';
+  x.textBaseline = 'alphabetic';
+  x.fillText('top domains', 804, 452);
+  const mix: [string, number][] = [
+    ['iot.lan', 0.38],
+    ['github.com', 0.27],
+    ['mqtt.lan', 0.19],
+    ['other', 0.16],
+  ];
+  let by = 478;
+  mix.forEach(([name, frac]) => {
+    x.font = '500 22px "Poppins", sans-serif';
+    x.fillStyle = '#9aa7b4';
+    x.textBaseline = 'middle';
+    x.fillText(name, 804, by + 14);
+    panel(x, 960, by, 308, 28, 14, '#151a21', '#232b34', 2);
+    panel(x, 962, by + 2, Math.max(24, Math.round(304 * frac)), 24, 12, spec.accent);
+    by += 46;
+  });
+  // verdict strip
+  panel(x, 76, 668, W - 152, 68, 10, '#0e1b18', spec.accent, 2);
+  x.font = '700 28px "Poppins", sans-serif';
+  x.fillStyle = spec.accent;
+  x.fillText('MODE: PASSIVE — LOG ONLY', 104, 704);
+}
+
+function drawTinykv(x: CanvasRenderingContext2D, spec: PosterSpec): void {
+  // the store's real interface: key/value operations
+  const ops: [string, string][] = [
+    ['SET user:nav "airgap"', 'OK'],
+    ['GET session:token', 'HIT'],
+    ['LRU evictions (24h)', '3 keys'],
+  ];
+  drawRows(
+    x,
+    ops.map((o) => [o[0], o[1], 'ok'] as [string, string, string]),
+    440,
+    spec
+  );
+  // footprint strip
+  panel(x, 76, 690, W - 152, 68, 10, '#1a0f0f', spec.accent, 2);
+  x.font = '700 28px "Poppins", sans-serif';
+  x.fillStyle = spec.accent;
+  x.fillText('STORE: ONLINE — 0.9 MB · LRU CACHE', 104, 726);
+}
+
 const DRAWERS: Record<
   PosterSpec['key'],
   (x: CanvasRenderingContext2D, spec: PosterSpec) => void
 > = {
   sentinelwifi: drawSentinel,
   banter: drawBanter,
-  airgapos: drawAirgapos,
+  portfolioos: drawPortfolioos,
   portwarden: drawPortwarden,
+  sentineldns: drawSentineldns,
+  tinykv: drawTinykv,
 };
 
 /** Render one project poster to a texture (crisp type, flat panels). */
@@ -331,8 +439,10 @@ export function createPosterTexture(spec: PosterSpec): THREE.CanvasTexture {
   drawChrome(x, spec, {
     sentinelwifi: 'live monitor',
     banter: 'chat room',
-    airgapos: 'boot session',
+    portfolioos: 'boot session',
     portwarden: 'service guard',
+    sentineldns: 'query log',
+    tinykv: 'store ops',
   }[spec.key]);
   DRAWERS[spec.key](x, spec);
   const tex = new THREE.CanvasTexture(canvas);

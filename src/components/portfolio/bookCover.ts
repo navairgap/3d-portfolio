@@ -22,14 +22,13 @@ export function createBookCoverTexture(): THREE.CanvasTexture {
   canvas.height = H;
   const x = canvas.getContext('2d')!;
 
-  // NOTE ON ORIENTATION: the About view reads the INSIDE of the flipped
-  // cover — the BACK face of the quad — which mirrors the texture along
-  // its U axis (verified on the live scene: an upright canvas displays
-  // mirror-written there). Authoring the canvas pre-mirrored cancels
-  // that, so the wordmark reads correctly in view.
-  x.save();
-  x.translate(W, 0);
-  x.scale(-1, 1);
+  // NOTE ON ORIENTATION: the cover is read from BOTH sides. The closed
+  // book on the desk (hero view) shows the quad's FRONT face, which
+  // displays this canvas as-authored; the open cover in the About view
+  // shows the BACK face, which mirrors it along U. Authoring the canvas
+  // upright keeps the hero view readable, and the material's shader
+  // (PortfolioExperience.tsx) flips U on back faces so the About view
+  // reads correctly too — one texture, both sides upright.
 
   // paper
   x.fillStyle = '#f4f2ee';
@@ -180,11 +179,11 @@ export function createBookCoverTexture(): THREE.CanvasTexture {
   x.fillStyle = '#a49f93';
   x.fillText('FIELD NOTES · NO 01', W / 2, 792);
 
-  // spine edge — the dark binding (mirrored frame: the physical left
-  // edge in view is the canvas's right edge)
+  // spine edge — the dark binding on the canvas's right edge: the side
+  // the cover hinges from, correct in both the closed hero view and the
+  // open About view
   x.fillStyle = 'rgba(29, 39, 51, 0.10)';
   x.fillRect(W - 14, 0, 14, H);
-  x.restore();
 
   const tex = new THREE.CanvasTexture(canvas);
   // @types/three r149 predates colorSpace — the runtime accepts both; the
