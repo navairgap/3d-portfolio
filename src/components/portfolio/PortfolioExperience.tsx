@@ -27,7 +27,18 @@ import { createPhoneScreen, type PhoneScreen } from './phoneScreen';
 import { createBookPage } from './bookPage';
 import { createRubiksCube, type RubiksCube } from './rubiksCube';
 import { createHexaWall, type HexaWall } from './hexaWall';
-import { createNoiseRoughnessMap } from './pbr';
+import {
+  createNoiseRoughnessMap,
+  createSurfaceGrainNormal,
+  boxProjectUVs,
+} from './pbr';
+import {
+  POSTER_SPECS,
+  createPosterTexture,
+  createFrameTexture,
+  frameWindowUV,
+} from './projectPosters';
+import { createBookCoverTexture } from './bookCover';
 import {
   createCarpet,
   CARPET_LIGHT,
@@ -73,6 +84,7 @@ interface ProjectDef {
   image: string;
   url: string;
   mesh?: THREE.Mesh | null;
+  frame?: THREE.Mesh | null;
   y?: number;
 }
 
@@ -375,9 +387,22 @@ export default function PortfolioExperience() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     // cap raised from 1.75 — on DPR-3 phones the canvas used to be
     // upscaled ~1.7x by the compositor, which read as a blurred scene
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // (2x desktop / 1.5x mobile: past 1.5 the eye stops paying off on a
+    // 5–6" screen, and the fill-rate saving is close to halving the
+    // per-frame pixel work)
+    const dprCap = isMobileNow() ? 1.5 : 2;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // ACES filmic tone mapping — the cheapest big realism win here: the
+    // daylight scene used to clip flat (the red floor blew out to a solid
+    // sheet, the wall lost its modelling), and clipping destroys the
+    // highlight detail that makes a render read as a photograph. ACES
+    // rolls those highlights off and adds contrast to the midtones at the
+    // cost of a single curve per pixel. Exposure is tuned to land on the
+    // brightness the art was signed off at.
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
 
     // CONTROLS — disabled until the intro sweep finishes
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -422,8 +447,13 @@ export default function PortfolioExperience() {
     const roomLight = new THREE.PointLight(0xffffff, 2.05, 10);
     roomLight.position.set(0.3, 2, 0.5);
     roomLight.castShadow = true;
-    roomLight.shadow.mapSize.width = 2048;
-    roomLight.shadow.mapSize.height = 2048;
+    // a point light is a cube shadow — SIX depth passes per frame, so
+    // this is the single most expensive object in the scene. 1024 on
+    // phones (4x fewer shadow texels, PCFSoft blurs the difference away)
+    // and the full 2048 where there's budget for crisp contact edges
+    const shadowRes = isMobileNow() ? 1024 : 2048;
+    roomLight.shadow.mapSize.width = shadowRes;
+    roomLight.shadow.mapSize.height = shadowRes;
     roomLight.shadow.camera.near = 0.1;
     roomLight.shadow.camera.far = 2.5;
     // PCFSoftShadowMap + a small slope-scaled bias paired with a normal
@@ -502,6 +532,16 @@ export default function PortfolioExperience() {
       renderer.capabilities.getMaxAnisotropy()
     );
     extraTextures.push(noiseMap);
+
+    // shared micro-relief normal map — room.glb ships NO textures at all
+    // (every material is a flat colour + a roughness value), so the desk,
+    // the PC shell and the floor were mathematically perfect planes: they
+    // reflected nothing back and read as plastic. One 256² height→normal
+    // conversion, tiled onto those surfaces via box-projected UVs, gives
+    // them real surface to catch the key light and the environment — a
+    // single extra texture fetch per fragment, no new passes.
+    const surfaceGrain = createSurfaceGrainNormal(256);
+    extraTextures.push(surfaceGrain);
 
     // ENVIRONMENT MAP — an equirectangular HDRI (RGBE) filtered through
     // PMREM gives every PBR material in the room physically-plausible
@@ -620,11 +660,14 @@ export default function PortfolioExperience() {
         // only needs ONE beauty source)
         renderPass.enabled = false;
         // very slight depth of field — the focal plane tracks the orbit
-        // target in the render loop
+        // target in the render loop. Deliberately shallow blur: the room
+        // is only ~1m deep, so a heavier circle of confusion was eating
+        // the crispness off the walls and the back of the desk for a
+        // cinematic cue nobody asked for.
         bokehPass = new BokehPass(scene, camera, {
           focus: 1.45,
-          aperture: 0.00012,
-          maxblur: 0.0028,
+          aperture: 0.000085,
+          maxblur: 0.0016,
         });
         composer.addPass(bokehPass);
       }
@@ -638,12 +681,15 @@ export default function PortfolioExperience() {
         0.82
       );
       composer.addPass(bloomPass);
-      // film grain — subtle animated monochrome noise, no scanlines
-      // (the runtime signature takes a boolean for grayscale; the bundled
-      // @types/three declares `number`, so pass 0 to satisfy both)
-      filmPass = new FilmPass(0.05, 0.0, 0.0, 0);
+      // film grain — subtle animated monochrome noise, no scanlines.
+      // Dialed back from 0.05: grain is a lovely film cue but it is
+      // literally noise laid over the detail, so at full strength it was
+      // costing perceived sharpness on the walls and keycaps. (the runtime
+      // signature takes a boolean for grayscale; the bundled @types/three
+      // declares `number`, so pass 0 to satisfy both)
+      filmPass = new FilmPass(0.034, 0.0, 0.0, 0);
       composer.addPass(filmPass);
-      composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      composer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
       composer.setSize(window.innerWidth, window.innerHeight);
     } catch (err) {
       console.warn(
@@ -699,35 +745,62 @@ export default function PortfolioExperience() {
     let idleClockTimer = 0;
     // ADAPTIVE QUALITY GUARD — the SSAO and DoF passes re-render the scene
     // and run per-pixel estimation; on software GL (headless machines,
-    // remote sandboxes) or very weak iGPUs that can collapse the frame
+    // remote sandboxes) or very weak iGPUs they can collapse the frame
     // rate. A rolling frame-cost probe watches playback and degrades in
-    // tiers: first the heavy passes drop (SSAO + DoF), then bloom. Real
-    // GPUs keep the full cinematic chain.
+    // tiers: first depth of field, then SSAO, then bloom, then the pixel
+    // ratio. Real GPUs keep the full cinematic chain.
     const perf = {
       frames: 0,
       acc: 0,
+      warm: 0,
       cleanChecks: 0,
+      slowChecks: 0,
       tier: 0,
       watching: true,
+      armed: false,
       last: 0,
     };
+    // A frame budget, not a disaster threshold: 40ms = 25fps. The old
+    // 120ms trip point meant a machine crawling at 10fps — which is what
+    // an integrated laptop GPU actually does with SSAO + DoF + bloom + a
+    // 2048 cube shadow all on — was classed as "fine" and never degraded.
+    const FRAME_BUDGET = 40;
     function degradeStep(): void {
       perf.tier++;
-      if (perf.tier === 1 && ssaoPass) {
+      if (perf.tier === 1 && bokehPass) {
+        // DoF first — it costs a depth re-render of the whole scene every
+        // frame, for the least visible effect in the chain
+        bokehPass.enabled = false;
+        console.info(
+          '[portfolio] GPU over budget — depth of field disabled (25fps floor)'
+        );
+        return;
+      }
+      if (perf.tier === 2 && ssaoPass) {
+        // then SSAO — a normal pass + a 32-tap AO estimate + blur
         ssaoPass.enabled = false;
-        if (bokehPass) bokehPass.enabled = false;
         if (renderPass) renderPass.enabled = true;
         console.info(
-          '[portfolio] slow GPU detected — SSAO and depth of field disabled to keep the frame rate smooth'
+          '[portfolio] GPU over budget — SSAO disabled, contact occlusion off'
         );
-      } else if (perf.tier === 2) {
-        if (bloomPass) bloomPass.enabled = false;
+        return;
+      }
+      if (perf.tier === 3 && bloomPass && bloomPass.enabled) {
+        bloomPass.enabled = false;
+        console.info('[portfolio] GPU over budget — bloom disabled');
+        return;
+      }
+      if (perf.tier >= 4) {
         composer?.setPixelRatio(1);
         composer?.setSize(window.innerWidth, window.innerHeight);
         console.info(
-          '[portfolio] very slow GPU detected — bloom disabled, plain render path'
+          '[portfolio] GPU over budget — rendering at 1x pixel ratio'
         );
+        return;
       }
+      // this tier had nothing to drop on this device (mobile boots with
+      // no SSAO/DoF at all) — move straight on to the next one
+      degradeStep();
     }
     function animate() {
       rafId = requestAnimationFrame(animate);
@@ -836,21 +909,43 @@ export default function PortfolioExperience() {
       }
       // adaptive quality — watch the WALL-CLOCK frame interval (rAF-to-rAF),
       // which captures GPU-side cost that async WebGL calls hide from a
-      // simple render() timing; degrade in tiers if the GPU can't keep up
-      if (perf.watching && perf.tier < 2) {
+      // simple render() timing; degrade in tiers if the GPU can't keep up.
+      // It arms only AFTER the room is entered — while assets stream in the
+      // frame cost belongs to the loader, and judging it would degrade the
+      // machine before it ever showed a full frame. Two slow windows are
+      // required before dropping a pass, so one hitch (decode, tab switch,
+      // GC) never costs quality.
+      if (perf.watching && perf.tier < 4) {
         const now = performance.now();
-        if (perf.last) {
+        if (!perf.armed) {
+          if (hasEntered) {
+            perf.armed = true;
+            perf.last = now;
+          }
+        } else if (perf.last) {
           perf.acc += now - perf.last;
           perf.frames++;
           if (perf.frames >= 20 || perf.acc > 3000) {
             const avg = perf.acc / Math.max(1, perf.frames);
             perf.frames = 0;
             perf.acc = 0;
-            if (avg > 120) {
-              degradeStep();
-            } else if (++perf.cleanChecks >= 3) {
-              // three clean windows in a row — stable, stop watching
-              perf.watching = false;
+            if (perf.warm < 2) {
+              // first two windows cover shader compilation and the intro
+              // camera sweep — those spikes belong to warm-up, not to the
+              // machine's real budget
+              perf.warm++;
+            } else if (avg > FRAME_BUDGET) {
+              perf.cleanChecks = 0;
+              if (++perf.slowChecks >= 2) {
+                perf.slowChecks = 0;
+                degradeStep();
+              }
+            } else {
+              perf.slowChecks = 0;
+              if (++perf.cleanChecks >= 3) {
+                // three clean windows in a row — stable, stop watching
+                perf.watching = false;
+              }
             }
           }
         }
@@ -1374,6 +1469,16 @@ export default function PortfolioExperience() {
     function resetProjects() {
       if (projects.length === 0) return;
       projects.forEach((project) => {
+        if (project.frame) {
+          gsap.killTweensOf(project.frame.position);
+          gsap.killTweensOf(project.frame.scale);
+          gsap.to(project.frame.scale, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 0.6,
+          });
+        }
         if (!project.mesh) return;
         gsap.killTweensOf(project.mesh.position);
         gsap.killTweensOf(project.mesh.scale);
@@ -1464,28 +1569,69 @@ export default function PortfolioExperience() {
 
     // PROJECT PLANES
     function createProjectPlanes() {
+      // FRAMED GALLERY — each project hangs in its own photo frame: a
+      // separate frame mesh (drawn aluminium + white mat, sits a hair
+      // behind and never intercepts rays) and the artwork itself as the
+      // clickable surface. The posters are vector-drawn canvases — the
+      // previous AI-generated PNGs carried garbled text ("Device
+      // ChecKUP", "portwaraden", "System Mobie zirro") that was
+      // unreadable up close.
+      const frameTex = createFrameTexture();
+      extraTextures.push(frameTex);
+      // artwork window in frame-UV space — the frame plane is sized so the
+      // window measures EXACTLY the artwork's 0.71x0.4: the mat is a real
+      // cut-out around the print, and the whole assembly stays inside the
+      // 0.8 layout pitch (frame 0.787 wide) so neighbours never overlap
+      const win = frameWindowUV();
+      const ART_W = 0.71;
+      const ART_H = 0.4;
+      const FRAME_PLANE_W = ART_W / (win.u1 - win.u0);
+      const FRAME_PLANE_H = ART_H / (win.v1 - win.v0);
+
       projects.forEach((project, i) => {
-        const colIndex = i % 3 === 0 ? 0 : 1;
-        const rowIndex = Math.floor(i / 3);
-        const geometry = new THREE.PlaneGeometry(0.71, 0.4);
+        // 2x2 gallery — the old i%3 column math double-booked column 1
+        // row 0, stacking banter and AirgapOS on the exact same spot
+        const colIndex = i % 2;
+        const rowIndex = Math.floor(i / 2);
+        const cx = 0.3 + 0.8 * colIndex;
+        const cy = 1 - rowIndex * 0.5;
+
+        // the artwork keeps the classic 16:9 plane the layout was tuned
+        // around (0.71 x 0.4)
+        const artGeo = new THREE.PlaneGeometry(0.71, 0.4);
+        const artTex = createPosterTexture(POSTER_SPECS[i % POSTER_SPECS.length]);
+        extraTextures.push(artTex);
         const material = new THREE.MeshBasicMaterial({
           color: 0xffffff,
-          map: new THREE.TextureLoader(manager).load(project.image),
+          map: artTex,
           transparent: true,
           opacity: 0.0,
         });
-        const projectPlane = new THREE.Mesh(geometry, material);
+        const projectPlane = new THREE.Mesh(artGeo, material);
         projectPlane.name = 'project';
         projectPlane.userData = { url: project.url };
-        projectPlane.position.set(
-          0.3 + i * 0.8 * colIndex,
-          1 - rowIndex * 0.5,
-          -1.15
-        );
+        projectPlane.position.set(cx, cy, -1.148);
         projectPlane.scale.set(0, 0, 0);
         project.mesh = projectPlane;
-        project.y = 1 - rowIndex * 0.5;
+        project.y = cy;
         scene.add(projectPlane);
+
+        // the photo frame plane: window-sized to the art, so the drawn mat
+        // wraps the print with no gaps. Sits 4mm BEHIND the poster. Same
+        // pop/pop-out animation as the artwork. toneMapped off keeps the
+        // white mat pure white through ACES.
+        const frameGeo = new THREE.PlaneGeometry(FRAME_PLANE_W, FRAME_PLANE_H);
+        const frameMat = new THREE.MeshBasicMaterial({
+          map: frameTex,
+          toneMapped: false,
+        });
+        const framePlane = new THREE.Mesh(frameGeo, frameMat);
+        framePlane.name = 'projectFrame';
+        framePlane.raycast = () => {}; // frame never blocks the click
+        framePlane.position.set(cx, cy, -1.152);
+        framePlane.scale.set(0, 0, 0);
+        scene.add(framePlane);
+        project.frame = framePlane;
       });
     }
 
@@ -1501,19 +1647,35 @@ export default function PortfolioExperience() {
       gsap.to(camera.rotation, { ...projectsCameraRot, duration: 1.5 });
       guardedDelay(1.5, () => setCloseVisible(true));
 
-      // animate & show project items
+      // animate & show project items — frame pops first (it hangs on the
+      // wall), the print fades in inside it a beat later
       projects.forEach((project, i) => {
+        if (project.frame) {
+          project.frame.scale.set(1, 1, 1);
+          gsap.fromTo(
+            project.frame.position,
+            { y: (project.y ?? 0) - 0.04 },
+            {
+              y: project.y ?? 0,
+              duration: 0.9,
+              delay: 1.35 + i * 0.1,
+              ease: 'power2.out',
+            }
+          );
+        }
         if (!project.mesh) return;
         project.mesh.scale.set(1, 1, 1);
         gsap.to(project.mesh.material as THREE.MeshBasicMaterial, {
           opacity: 1,
-          duration: 1.5,
-          delay: 1.5 + i * 0.1,
+          duration: 1.2,
+          delay: 1.55 + i * 0.1,
         });
+        // the print lands exactly IN its frame — the old +0.05 lift was
+        // designed for bare planes and left the art hanging above the mat
         gsap.to(project.mesh.position, {
-          y: (project.y ?? 0) + 0.05,
+          y: project.y ?? 0,
           duration: 1,
-          delay: 1.5 + i * 0.1,
+          delay: 1.55 + i * 0.1,
         });
       });
     }
@@ -2385,8 +2547,14 @@ export default function PortfolioExperience() {
       }
 
       if (mobile) {
-        projectsCameraPos = { x: 1.1, y: 0.82, z: 0.5 };
-        projectsCameraRot = { x: 0, y: 0, z: 1.55 };
+        // Phones/tablets hold the device in portrait, and the old pose
+        // rolled the camera 90° (z: 1.55) to compensate — which tilted the
+        // whole gallery sideways in landscape/desktop windows under the
+        // 992px breakpoint and made the wall read as a diagonal mess.
+        // The upright pose works at any aspect: the wall is framed by
+        // moving the camera, not by rolling it.
+        projectsCameraPos = { x: 0.72, y: 0.62, z: 0.62 };
+        projectsCameraRot = { x: 0.03, y: 0.1, z: 0 };
         controls.maxDistance = 1.5;
         controls.maxAzimuthAngle = Math.PI * 0.75;
       } else {
@@ -2397,7 +2565,10 @@ export default function PortfolioExperience() {
       }
       projects.forEach((project) => {
         if (project.mesh) {
-          project.mesh.position.z = mobile ? -1.13 : -1.15;
+          project.mesh.position.z = mobile ? -1.128 : -1.148;
+        }
+        if (project.frame) {
+          project.frame.position.z = mobile ? -1.132 : -1.152;
         }
       });
     }
@@ -2544,9 +2715,10 @@ export default function PortfolioExperience() {
 
               // add texture to book cover
               if (innerChild.name === 'Book001') {
-                const bookCoverTexture = new THREE.TextureLoader(
-                  manager
-                ).load('/textures/book-cover.png');
+                // drawn cover — the old AI-generated PNG had mirrored
+                // lettering ("ЯAIAVAN"); vector text can't be mirrored
+                const bookCoverTexture = createBookCoverTexture();
+                // the model's cover quad bakes flipY=false-style UVs
                 bookCoverTexture.flipY = false;
                 // the cover is read at a shallow angle in the about view
                 // — anisotropy keeps the emblem crisp instead of mip-blurred
@@ -2626,12 +2798,20 @@ export default function PortfolioExperience() {
                 const mat = new THREE.MeshPhysicalMaterial();
                 mat.roughness = 0;
                 mat.color.set(0x999999);
-                mat.ior = 3;
-                // the first panel refracts a touch harder, as before
-                mat.transmission = inner.name === 'CPU_Glass' ? 2 : 1;
-                mat.opacity = 0.8;
+                mat.ior = 1.5;
+                // Glass transmission used to ship with ior 3 (denser than
+                // diamond) and depthTest false — the first made the panels
+                // refract into a milky smear, the second let them draw ON
+                // TOP of everything in front of them (the floating panes
+                // over the About screen). Clear glass: physical ior, real
+                // depth testing, a faint tint.
+                mat.transmission = 0.92;
+                mat.thickness = 0.004;
+                mat.opacity = 1;
+                mat.transparent = false;
                 mat.depthWrite = false;
-                mat.depthTest = false;
+                mat.depthTest = true;
+                mat.side = THREE.FrontSide;
                 registerEnvMaterial(mat, 0);
                 m.material = mat;
                 glassMats.push(mat);
@@ -2680,6 +2860,14 @@ export default function PortfolioExperience() {
                   raw.name !== 'Red Glow'
                 ) {
                   std.roughnessMap = noiseMap;
+                  // the model ships stale UVs (room.glb has no textures,
+                  // so they were never written) — without fresh ones a
+                  // tiled map samples one texel for the whole shell
+                  boxProjectUVs(mm.geometry, 0.08);
+                  // painted-aluminium micro relief: the tower's panels
+                  // pick up a faint surface instead of a dead flat tone
+                  std.normalMap = surfaceGrain;
+                  std.normalScale = new THREE.Vector2(0.3, 0.3);
                   std.needsUpdate = true;
                 }
               });
@@ -2741,6 +2929,40 @@ export default function PortfolioExperience() {
 
         scene.add(room.scene);
 
+        // ANISOTROPY SWEEP — glTF textures default to anisotropy 1, which
+        // is the classic "why is everything at an angle blurry" bug: any
+        // surface seen grazing (desk top, floor, honeycomb wall) samples a
+        // single mip level and comes out soft. 8x anisotropic filtering is
+        // a sampler state, not a pass — it sharpens every textured surface
+        // in the room for free and costs nothing measurable.
+        const maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        const anisoSlots = [
+          'map',
+          'normalMap',
+          'roughnessMap',
+          'metalnessMap',
+          'emissiveMap',
+          'aoMap',
+          'alphaMap',
+        ] as const;
+        room.scene.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh || !m.material) return;
+          const mats = Array.isArray(m.material) ? m.material : [m.material];
+          mats.forEach((mat) => {
+            const std = mat as THREE.MeshStandardMaterial;
+            anisoSlots.forEach((slot) => {
+              const tex = std[slot];
+              if (tex && tex.isTexture && tex.anisotropy < maxAniso) {
+                tex.anisotropy = maxAniso;
+                // the texture may already be uploaded — bump the version
+                // so three re-applies the sampler state
+                tex.needsUpdate = true;
+              }
+            });
+          });
+        });
+
         // floor rug — a woven rounded carpet under and in front of the
         // desk, added to the room group so it inherits the responsive
         // scaling; it sits a hair above the shell's floor to avoid
@@ -2777,6 +2999,23 @@ export default function PortfolioExperience() {
           // PBR micro-variance — the red day floor reads as a matte
           // finished surface with grain, not flat plastic
           floorSkin.material.roughnessMap = noiseMap;
+          // micro relief on the largest flat surface in the frame. The
+          // skin's own map keeps its 0..1 UVs (its vignette must not
+          // repeat), so the normal map gets a CLONED texture instance with
+          // its own ~16cm repeat instead — same pixels, independent tiling
+          const floorGrain = surfaceGrain.clone();
+          floorGrain.wrapS = THREE.RepeatWrapping;
+          floorGrain.wrapT = THREE.RepeatWrapping;
+          const fp = (floorSkin.mesh.geometry as THREE.PlaneGeometry)
+            .parameters as { width?: number; height?: number } | undefined;
+          const FLOOR_TILE = 0.16;
+          floorGrain.repeat.set(
+            fp?.width ? Math.max(1, Math.round(fp.width / FLOOR_TILE)) : 10,
+            fp?.height ? Math.max(1, Math.round(fp.height / FLOOR_TILE)) : 10
+          );
+          floorGrain.needsUpdate = true;
+          floorSkin.material.normalMap = floorGrain;
+          floorSkin.material.normalScale = new THREE.Vector2(0.5, 0.5);
           floorSkin.material.needsUpdate = true;
         }
 
@@ -2895,14 +3134,32 @@ export default function PortfolioExperience() {
         // The noise maps give it a brushed matte finish with sparse
         // metallic flecks, like a real hard gaming mat
         if (tableMesh) {
+          // fresh world-scaled UVs first — the desk's roughness/metalness
+          // noise was sampling the GLB's stale UVs (a single texel), so the
+          // "metallic flecks" never actually rendered; at 10cm per tile the
+          // grain and the flecks now have real physical size
+          boxProjectUVs(tableMesh.geometry, 0.1);
           tableGamingMat = new THREE.MeshStandardMaterial({
             color: 0x181b21,
             roughness: 0.55,
             metalness: 0.28,
             roughnessMap: noiseMap,
             metalnessMap: noiseMap,
+            normalMap: surfaceGrain,
+            normalScale: new THREE.Vector2(0.34, 0.34),
           });
           tableMesh.material = tableGamingMat;
+          // the dark theme swaps back to the original material — same
+          // relief, so both looks share one surface language
+          const origMat = tableOriginalMat;
+          if (origMat && !Array.isArray(origMat)) {
+            const std = origMat as THREE.MeshStandardMaterial;
+            if (std.isMeshStandardMaterial) {
+              std.normalMap = surfaceGrain;
+              std.normalScale = new THREE.Vector2(0.34, 0.34);
+              std.needsUpdate = true;
+            }
+          }
         }
 
         // one consistent reflection pass over every PBR material in the
@@ -3219,7 +3476,11 @@ export default function PortfolioExperience() {
             extraTextures.push(ktxTex);
 
             if (!cpuGroup || !roomRoot) return;
-            // placement on the camera-facing face of the tower's world box
+            // placement on the camera-facing face of the tower's world box.
+            // The badge sits in the lower-front corner like a maker's
+            // sticker: vertically it clears the power button (which lives
+            // mid-panel), horizontally it hugs the front edge — dead centre
+            // read as "this is the on button", which it is not.
             const worldBox = new THREE.Box3().setFromObject(cpuGroup);
             const center = worldBox.getCenter(new THREE.Vector3());
             const half = worldBox
@@ -3242,11 +3503,25 @@ export default function PortfolioExperience() {
               n.set(0, 0, Math.sign(dir.z));
             }
             const eps = 0.0016;
-            const worldPos = new THREE.Vector3(
-              center.x + n.x * (half.x + eps),
-              center.y + n.y * (half.y + eps),
-              center.z + n.z * (half.z + eps)
+            // 78% down the panel, 30% of the width toward the leading edge
+            const badgeWorld = new THREE.Vector3(
+              center.x +
+                n.x * (half.x + eps) +
+                (Math.abs(n.x) > 0.5
+                  ? 0
+                  : n.z !== 0
+                    ? half.x * 0.3 * Math.sign(dir.x || 1)
+                    : 0),
+              center.y - half.y * 0.56,
+              center.z +
+                n.z * (half.z + eps) +
+                (Math.abs(n.z) > 0.5
+                  ? 0
+                  : n.x !== 0
+                    ? half.z * 0.3 * Math.sign(dir.z || 1)
+                    : 0)
             );
+            const worldPos = badgeWorld;
 
             const badgeGeo = new THREE.PlaneGeometry(0.022, 0.0305);
             // compressed textures upload without flipY — mirror the V

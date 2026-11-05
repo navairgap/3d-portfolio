@@ -168,3 +168,113 @@ export function createNoiseRoughnessMap(size = 256): THREE.CanvasTexture {
   tex.wrapT = THREE.RepeatWrapping;
   return tex;
 }
+
+/**
+ * Tiled micro-relief normal map for the model's flat-colour surfaces
+ * (desk top, PC tower, floor). room.glb ships with NO textures at all —
+ * every surface is a plain colour plus a roughness value, which is why
+ * they read as shader-perfect plastic. This turns the shared noise field
+ * into a real height → normal conversion: a fine orange-peel/speckle
+ * relief that catches the key light and the environment, so large panels
+ * gain visible surface instead of a dead flat tone.
+ *
+ * Cheap by construction: one 256² canvas generated once at load, shared
+ * by every material, sampled with RepeatWrapping + anisotropy — a single
+ * extra texture fetch per fragment.
+ */
+export function createSurfaceGrainNormal(size = 256): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  // mid-grey base = flat surface; every deviation below becomes relief
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, size, size);
+
+  // soft meso blotches — shallow rolling undulation like painted plaster
+  // or a moulded desk shell, drawn at the 9 wrap offsets so it tiles
+  const offsets = [-size, 0, size].flatMap((dx) =>
+    [-size, 0, size].map((dy) => [dx, dy])
+  );
+  for (let i = 0; i < 38; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = size * (0.06 + Math.random() * 0.2);
+    const light = Math.random() < 0.5;
+    const a = 0.05 + Math.random() * 0.06;
+    for (const [dx, dy] of offsets) {
+      const g = ctx.createRadialGradient(
+        x + dx,
+        y + dy,
+        0,
+        x + dx,
+        y + dy,
+        r
+      );
+      g.addColorStop(0, light ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${a})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+    }
+  }
+
+  // fine speckle — the grain you only see up close (mipmaps take it
+  // away again at distance, so it never shimmers far away)
+  const specks = size * size * 0.1;
+  for (let i = 0; i < specks; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const light = Math.random() < 0.5;
+    const a = 0.06 + Math.random() * 0.14;
+    ctx.fillStyle = light
+      ? `rgba(255,255,255,${a.toFixed(3)})`
+      : `rgba(0,0,0,${a.toFixed(3)})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const tex = heightCanvasToNormalTexture(canvas, 1.15, THREE.RepeatWrapping);
+  tex.anisotropy = 8;
+  return tex;
+}
+
+/**
+ * Rebuild a mesh's UVs by box (triplanar) projection from its own
+ * position + normal data.
+ *
+ * The GLB ships stale/unused UVs (the wall already regenerates its own),
+ * so a material can't tile a map across a surface like the desk or the PC
+ * shell — every vertex would sample one texel. Projecting each vertex onto
+ * the dominant axis plane of its normal gives seamless, world-scaled UVs
+ * (one `tile` unit per repeat) with no seams on boxy geometry. Non-axis-
+ * aligned detail (curved parts) still maps cleanly because the dominant
+ * axis flips with the normal.
+ */
+export function boxProjectUVs(
+  geo: THREE.BufferGeometry,
+  tile: number
+): void {
+  const pos = geo.attributes.position as THREE.BufferAttribute | undefined;
+  const nor = geo.attributes.normal as THREE.BufferAttribute | undefined;
+  if (!pos || !nor || tile <= 0) return;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const ax = Math.abs(nor.getX(i));
+    const ay = Math.abs(nor.getY(i));
+    const az = Math.abs(nor.getZ(i));
+    if (ay >= ax && ay >= az) {
+      // top / bottom — project onto the x/z plane
+      uv[i * 2] = pos.getX(i) / tile;
+      uv[i * 2 + 1] = pos.getZ(i) / tile;
+    } else if (ax >= az) {
+      // side facing ±x — project onto the z/y plane
+      uv[i * 2] = pos.getZ(i) / tile;
+      uv[i * 2 + 1] = pos.getY(i) / tile;
+    } else {
+      // side facing ±z — project onto the x/y plane
+      uv[i * 2] = pos.getX(i) / tile;
+      uv[i * 2 + 1] = pos.getY(i) / tile;
+    }
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+}
