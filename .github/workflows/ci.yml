@@ -17,6 +17,8 @@ jobs:
       - run: npm ci
       - name: Generate Prisma client
         run: npx prisma generate
+      - name: ESLint
+        run: npm run lint
       - name: TypeScript check
         run: npx tsc --noEmit
       - name: Production build
