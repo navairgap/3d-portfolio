@@ -118,7 +118,6 @@ Room text, project URLs, and poster content are plain strings/data in `src/compo
 
 ## Credits
 
-- Room model concept adapted from [sushilthapa98/3d-portfolio](https://github.com/sushilthapa98/3d-portfolio) (credited in the footer)
 - HDRI environment map from the [three.js examples](https://threejs.org) collection
 - Geometry & texture compression: Google [Draco](https://github.com/google/draco) and Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) — runtime decoders bundled under `public/`
 - Built with [Three.js](https://threejs.org), [Next.js](https://nextjs.org), and [GSAP](https://gsap.com)

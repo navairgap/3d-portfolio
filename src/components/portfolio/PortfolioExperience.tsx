@@ -4238,13 +4238,14 @@ export default function PortfolioExperience() {
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
           NAV
         </a>{' '}
-        · 3D concept by{' '}
+        · 3D concept:{' '}
         <a
           href="https://github.com/sushilthapa98/3d-portfolio"
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="3D concept — upstream repository"
         >
-          Sushil Thapa
+          github.com/sushilthapa98
         </a>
       </footer>
     </>
