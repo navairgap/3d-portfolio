@@ -1,50 +1,55 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const eslintConfig = [
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+  {
+    rules: {
+      // TypeScript — keep the guardrails that catch real mistakes
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
 
-const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
-  rules: {
-    // TypeScript rules
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
-    "@typescript-eslint/no-non-null-assertion": "off",
-    "@typescript-eslint/ban-ts-comment": "off",
-    "@typescript-eslint/prefer-as-const": "off",
-    "@typescript-eslint/no-unused-disable-directive": "off",
-    
-    // React rules
-    "react-hooks/exhaustive-deps": "off",
-    "react-hooks/purity": "off",
-    "react/no-unescaped-entities": "off",
-    "react/display-name": "off",
-    "react/prop-types": "off",
-    "react-compiler/react-compiler": "off",
-    
-    // Next.js rules
-    "@next/next/no-img-element": "off",
-    "@next/next/no-html-link-for-pages": "off",
-    
-    // General JavaScript rules
-    "prefer-const": "off",
-    "no-unused-vars": "off",
-    "no-console": "off",
-    "no-debugger": "off",
-    "no-empty": "off",
-    "no-irregular-whitespace": "off",
-    "no-case-declarations": "off",
-    "no-fallthrough": "off",
-    "no-mixed-spaces-and-tabs": "off",
-    "no-redeclare": "off",
-    "no-undef": "off",
-    "no-unreachable": "off",
-    "no-useless-escape": "off",
+      // React — the single big useEffect manages an imperative Three.js
+      // world with its own effectActive/worldDisposed guards, so the
+      // dependency lint would only produce noise here
+      "react-hooks/exhaustive-deps": "off",
+      "react/no-unescaped-entities": "error",
+
+      // Next.js — the logo <img> inside the canvas overlay is deliberate
+      // (next/image adds nothing for a 70px fixed asset). The Google Fonts
+      // <link> in the root layout is also deliberate: React 19 hoists it to
+      // <head> for every page, and the canvas textures draw text with the
+      // literal 'Poppins' family, so a hashed next/font family would break
+      // them (the rule itself is a pages-router relic).
+      "@next/next/no-img-element": "off",
+      "@next/next/no-page-custom-font": "off",
+
+      // General JavaScript — console.* is used for intentional, useful
+      // diagnostics (GPU degrade notices, asset failure warnings)
+      "prefer-const": "error",
+      "no-console": "off",
+      "no-debugger": "error",
+      "no-unreachable": "error",
+      "no-fallthrough": "error",
+      "no-redeclare": "error",
+      "no-useless-escape": "error",
+    },
   },
-}, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills", "public/**", "mini-services/**", "download/**", "upload/**", "scripts/**", "tool-results/**", "tests/**"]
-}];
+  {
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+      "public/**",
+    ],
+  },
+];
 
 export default eslintConfig;

@@ -15,8 +15,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate Prisma client
-        run: npx prisma generate
       - name: ESLint
         run: npm run lint
       - name: TypeScript check
