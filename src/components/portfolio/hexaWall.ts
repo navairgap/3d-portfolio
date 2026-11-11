@@ -127,8 +127,8 @@ function speckle(
     const y = Math.random() * CANVAS_H;
     const dark = Math.random() < 0.6;
     ctx.fillStyle = dark
-      ? `rgba(30, 36, 44, ${(Math.random() * darkAlpha).toFixed(3)}`
-      : `rgba(255, 255, 255, ${(Math.random() * lightAlpha).toFixed(3)}`;
+      ? `rgba(30, 36, 44, ${(Math.random() * darkAlpha).toFixed(3)})`
+      : `rgba(255, 255, 255, ${(Math.random() * lightAlpha).toFixed(3)})`;
     ctx.fillRect(x, y, 1, 1);
   }
 }

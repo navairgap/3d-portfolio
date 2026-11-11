@@ -323,7 +323,7 @@ function drawPortwarden(x: CanvasRenderingContext2D, spec: PosterSpec): void {
   x.beginPath();
   x.strokeStyle = spec.accent;
   x.lineWidth = 4;
-  let py = 660;
+  const py = 660;
   for (let i = 0; i <= 40; i++) {
     const px = 76 + (i / 40) * (W - 152);
     const noise = Math.sin(i * 0.9) * 12 + Math.sin(i * 2.3) * 7;

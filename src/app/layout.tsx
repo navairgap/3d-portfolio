@@ -1,17 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Imported at the layout level so the loader renders styled on first
+// paint — before the dynamically-imported 3D chunk (which also imports
+// this file) has loaded. Next dedupes the single CSS module.
+import "@/components/portfolio/portfolio.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://3d-portfolio-nav-8975.vercel.app"),
@@ -45,7 +36,7 @@ export const metadata: Metadata = {
     url: "https://3d-portfolio-nav-8975.vercel.app",
     siteName: "NAV — 3D Portfolio",
     type: "website",
-    images: [{ url: "/images/preview.jpg", width: 1344, height: 768 }],
+    images: [{ url: "/images/preview.jpg", width: 1344, height: 756 }],
   },
   twitter: {
     card: "summary_large_image",
@@ -63,9 +54,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased light-theme`}
-      >
+      <body className="light-theme">
+        {/* React 19 hoists these <link> elements into <head>. Poppins must
+            keep its public family name — the canvas textures (book page,
+            cover, project posters) draw text with literal 'Poppins' strings
+            and document.fonts.load(), so a hashed next/font family would
+            silently break them. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -77,7 +71,6 @@ export default function RootLayout({
           rel="stylesheet"
         />
         {children}
-        <Toaster />
       </body>
     </html>
   );

@@ -81,38 +81,21 @@ import {
  */
 
 interface ProjectDef {
-  image: string;
   url: string;
   mesh?: THREE.Mesh | null;
   frame?: THREE.Mesh | null;
   y?: number;
 }
 
+// the wall art is vector-drawn per project (POSTER_SPECS in
+// projectPosters.ts) — no bitmap assets involved
 const PROJECTS: ProjectDef[] = [
-  {
-    image: '/textures/project-sentinelwifi.png',
-    url: 'https://github.com/navairgap/SentinelWiFi',
-  },
-  {
-    image: '/textures/project-banter.png',
-    url: 'https://github.com/navairgap/banter',
-  },
-  {
-    image: '/textures/project-airgapos.png',
-    url: 'https://github.com/navairgap/portfolio-os',
-  },
-  {
-    image: '/textures/project-portwarden.png',
-    url: 'https://github.com/navairgap/portwarden',
-  },
-  {
-    image: '/textures/project-sentineldns.png',
-    url: 'https://github.com/navairgap/sentinel-dns',
-  },
-  {
-    image: '/textures/project-tinykv.png',
-    url: 'https://github.com/navairgap/tinykv',
-  },
+  { url: 'https://github.com/navairgap/SentinelWiFi' },
+  { url: 'https://github.com/navairgap/banter' },
+  { url: 'https://github.com/navairgap/portfolio-os' },
+  { url: 'https://github.com/navairgap/portwarden' },
+  { url: 'https://github.com/navairgap/sentinel-dns' },
+  { url: 'https://github.com/navairgap/tinykv' },
 ];
 
 const CLIP_NAMES = [
@@ -216,6 +199,16 @@ export default function PortfolioExperience() {
   const worldRef = useRef<WorldActions | null>(null);
   const contactMenuRef = useRef<HTMLLIElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const loaderTimeoutRef = useRef<number | null>(null);
+
+  // clear the loader fade timer if the component unmounts mid-fade
+  useEffect(() => {
+    return () => {
+      if (loaderTimeoutRef.current !== null) {
+        window.clearTimeout(loaderTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
@@ -231,8 +224,10 @@ export default function PortfolioExperience() {
   const [lightsOn, setLightsOn] = useState(true);
   const [webglUnavailable, setWebglUnavailable] = useState(false);
 
-  // Close contact dropdown when clicking outside
+  // Close contact dropdown when clicking outside, or with Escape
+  // (focus returns to the trigger so keyboard users aren't stranded)
   useEffect(() => {
+    if (!dropdownOpen) return;
     const onMouseUp = (e: MouseEvent) => {
       if (
         contactMenuRef.current &&
@@ -241,9 +236,21 @@ export default function PortfolioExperience() {
         setDropdownOpen(false);
       }
     };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // keep the world's ESC-resets-the-camera handler from also firing
+        e.stopPropagation();
+        setDropdownOpen(false);
+        document.getElementById('contact-btn')?.focus();
+      }
+    };
     document.addEventListener('mouseup', onMouseUp);
-    return () => document.removeEventListener('mouseup', onMouseUp);
-  }, []);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [dropdownOpen]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -284,6 +291,7 @@ export default function PortfolioExperience() {
     let kbPeekBusyUntil = 0;
     let kbPeekLastSeq = -1;
     let videoEl: HTMLVideoElement | null = null;
+    let videoTexture: THREE.VideoTexture | null = null;
     let idleTypeTimer = 4;
     let elapsed = 0;
     let lastInteraction = performance.now();
@@ -293,12 +301,12 @@ export default function PortfolioExperience() {
     let screenMesh: THREE.Mesh | null = null;
     let videoMat: THREE.MeshBasicMaterial | null = null;
     let screenOffMat: THREE.MeshPhysicalMaterial | null = null;
-    let glassMats: THREE.MeshPhysicalMaterial[] = [];
+    const glassMats: THREE.MeshPhysicalMaterial[] = [];
     let cpuGroup: THREE.Object3D | null = null;
-    let ledMeshes: THREE.Mesh[] = [];
-    let ledOriginalMats: (THREE.Material | THREE.Material[])[] = [];
+    const ledMeshes: THREE.Mesh[] = [];
+    const ledOriginalMats: (THREE.Material | THREE.Material[])[] = [];
     let ledOffMat: THREE.MeshStandardMaterial | null = null;
-    let monitorBlockers: THREE.Object3D[] = [];
+    const monitorBlockers: THREE.Object3D[] = [];
     let envRT: THREE.WebGLRenderTarget | null = null;
     // the plant cluster + tower LOD stand-ins and their shared resources
     let plantPot: THREE.Object3D | null = null;
@@ -316,7 +324,7 @@ export default function PortfolioExperience() {
     let coffeeBusyUntil = 0;
     let coffeeLastSeq = -1;
     let steamTexture: THREE.CanvasTexture | null = null;
-    let steamPuffs: THREE.Sprite[] = [];
+    const steamPuffs: THREE.Sprite[] = [];
     // wall material — sky blue while the lights are on; carries the
     // honeycomb textures (embossed panels by day, neon LED grid at night)
     let wallMat: THREE.MeshStandardMaterial | null = null;
@@ -902,7 +910,12 @@ export default function PortfolioExperience() {
       // the DoF focal plane tracks the orbit target, so whatever the
       // camera is framed on stays sharp and the room's edges soften
       if (bokehPass) {
-        bokehPass.uniforms['focus'].value = camera.position.distanceTo(
+        // BokehPass's uniforms are untyped in three 0.149's example types
+        const bokehUniforms = bokehPass.uniforms as Record<
+          string,
+          { value: number }
+        >;
+        bokehUniforms['focus'].value = camera.position.distanceTo(
           controls.target
         );
       }
@@ -968,62 +981,77 @@ export default function PortfolioExperience() {
     // aligned rectangle on the wall
     function loadIntroText() {
       const loader = new FontLoader(manager);
-      loader.load('/fonts/unione.json', function (font) {
-        const makeMaterials = () => [
-          new THREE.MeshPhongMaterial({ color: 0x171f27, flatShading: true }),
-          new THREE.MeshPhongMaterial({ color: 0xffffff }),
-        ];
+      loader.load(
+        '/fonts/unione.json',
+        function (font) {
+          // a font arriving after unmount must not touch the dead scene
+          if (worldDisposed) return;
+          const makeMaterials = () => [
+            new THREE.MeshPhongMaterial({ color: 0x171f27, flatShading: true }),
+            new THREE.MeshPhongMaterial({ color: 0xffffff }),
+          ];
 
-        const build = (str: string, size: number, depth: number) => {
-          const geo = new TextGeometry(str, {
-            font: font,
-            size: size,
-            height: depth,
-          });
-          geo.computeBoundingBox();
-          const bb = geo.boundingBox!;
-          const width = bb.max.x - bb.min.x;
-          // strip the left side bearing so the anchor IS the left edge
-          geo.translate(-bb.min.x, 0, 0);
-          return { geo, width };
-        };
+          const build = (str: string, size: number, depth: number) => {
+            const geo = new TextGeometry(str, {
+              font: font,
+              size: size,
+              height: depth,
+            });
+            geo.computeBoundingBox();
+            const bb = geo.boundingBox!;
+            const width = bb.max.x - bb.min.x;
+            // strip the left side bearing so the anchor IS the left edge
+            geo.translate(-bb.min.x, 0, 0);
+            return { geo, width };
+          };
 
-        const TITLE_SIZE = 0.08;
-        const DEPTH_RATIO = 0.125; // title: 0.01 depth at 0.08 size
+          const TITLE_SIZE = 0.08;
+          const DEPTH_RATIO = 0.125; // title: 0.01 depth at 0.08 size
 
-        const title = build('NAVAIRGAP', TITLE_SIZE, TITLE_SIZE * DEPTH_RATIO);
+          const title = build(
+            'NAVAIRGAP',
+            TITLE_SIZE,
+            TITLE_SIZE * DEPTH_RATIO
+          );
 
-        // solve the subtitle size that makes its width equal the title width
-        const SUB_RAW = 'SECURITY RESEARCHER / BACKEND DEVELOPER';
-        const probe = build(SUB_RAW, 0.02, 0.0025);
-        probe.geo.dispose();
-        let subSize = 0.02 * (title.width / probe.width);
-        subSize = THREE.MathUtils.clamp(subSize, 0.014, 0.032);
-        // same ABSOLUTE extrusion depth as the title so the 3D style reads
-        // identically on both lines (a proportional depth is invisible at
-        // the subtitle's scale)
-        const sub = build(SUB_RAW, subSize, TITLE_SIZE * DEPTH_RATIO);
+          // solve the subtitle size that makes its width equal the title width
+          const SUB_RAW = 'SECURITY RESEARCHER / BACKEND DEVELOPER';
+          const probe = build(SUB_RAW, 0.02, 0.0025);
+          probe.geo.dispose();
+          let subSize = 0.02 * (title.width / probe.width);
+          subSize = THREE.MathUtils.clamp(subSize, 0.014, 0.032);
+          // same ABSOLUTE extrusion depth as the title so the 3D style reads
+          // identically on both lines (a proportional depth is invisible at
+          // the subtitle's scale)
+          const sub = build(SUB_RAW, subSize, TITLE_SIZE * DEPTH_RATIO);
 
-        titleText = new THREE.Mesh(title.geo, makeMaterials());
-        titleText.rotation.y = Math.PI * 0.5;
-        titleText.position.set(-0.27, 0.55, 0.42);
-        scene.add(titleText);
+          titleText = new THREE.Mesh(title.geo, makeMaterials());
+          titleText.rotation.y = Math.PI * 0.5;
+          titleText.position.set(-0.27, 0.55, 0.42);
+          scene.add(titleText);
 
-        // the wall is viewed nearly head-on along the extrusion axis, so
-        // white side faces (the title's look) vanish at subtitle scale —
-        // dark side faces keep the extrusion silhouette readable instead
-        subtitleText = new THREE.Mesh(sub.geo, [
-          new THREE.MeshPhongMaterial({
-            color: 0x171f27,
-            flatShading: true,
-          }),
-          new THREE.MeshPhongMaterial({ color: 0x3d4956 }),
-        ]);
-        subtitleText.rotation.y = Math.PI * 0.5;
-        // same wall offset, same left edge (z), tucked under the baseline
-        subtitleText.position.set(-0.27, 0.5, 0.42);
-        scene.add(subtitleText);
-      });
+          // the wall is viewed nearly head-on along the extrusion axis, so
+          // white side faces (the title's look) vanish at subtitle scale —
+          // dark side faces keep the extrusion silhouette readable instead
+          subtitleText = new THREE.Mesh(sub.geo, [
+            new THREE.MeshPhongMaterial({
+              color: 0x171f27,
+              flatShading: true,
+            }),
+            new THREE.MeshPhongMaterial({ color: 0x3d4956 }),
+          ]);
+          subtitleText.rotation.y = Math.PI * 0.5;
+          // same wall offset, same left edge (z), tucked under the baseline
+          subtitleText.position.set(-0.27, 0.5, 0.42);
+          scene.add(subtitleText);
+        },
+        undefined,
+        () => {
+          // the wall lockup is decoration — never block the room on a
+          // font that fails to load
+          console.warn('Intro text font unavailable — wall title skipped');
+        }
+      );
     }
 
     // THEME SWITCH (light / dark)
@@ -1662,6 +1690,11 @@ export default function PortfolioExperience() {
       // wall), the print fades in inside it a beat later
       projects.forEach((project, i) => {
         if (project.frame) {
+          // kill the delayed hide tween resetProjects may have scheduled —
+          // otherwise it can fire AFTER the restore below and snap the
+          // frame (and print) back to scale 0, permanently invisible
+          gsap.killTweensOf(project.frame.position);
+          gsap.killTweensOf(project.frame.scale);
           project.frame.scale.set(1, 1, 1);
           gsap.fromTo(
             project.frame.position,
@@ -1675,6 +1708,9 @@ export default function PortfolioExperience() {
           );
         }
         if (!project.mesh) return;
+        gsap.killTweensOf(project.mesh.position);
+        gsap.killTweensOf(project.mesh.scale);
+        gsap.killTweensOf(project.mesh.material as THREE.MeshBasicMaterial);
         project.mesh.scale.set(1, 1, 1);
         gsap.to(project.mesh.material as THREE.MeshBasicMaterial, {
           opacity: 1,
@@ -1759,7 +1795,7 @@ export default function PortfolioExperience() {
       const uAxis = uVec.divideScalar(uLen);
       const vAxis = vVec.divideScalar(vLen);
 
-      let normal = new THREE.Vector3().crossVectors(uAxis, vAxis);
+      const normal = new THREE.Vector3().crossVectors(uAxis, vAxis);
       if (normal.lengthSq() < 1e-10) {
         normal.set(0, 1, 0);
       } else {
@@ -2511,8 +2547,10 @@ export default function PortfolioExperience() {
     // RESPONSIVE — idempotent, re-run on resize so rotating a phone
     // re-frames the room correctly
     function initResponsive(roomScene: THREE.Group) {
-      const mobile = isMobileNow();
-      roomScene.scale.setScalar(mobile ? 0.95 : 1);
+      // NB: deliberately NOT named `mobile` — that name is the phone mesh
+      // in this scope
+      const compact = isMobileNow();
+      roomScene.scale.setScalar(compact ? 0.95 : 1);
 
       // about view: look STRAIGHT DOWN at the notebook page, computed
       // from the book's real world-space geometry (works at any room
@@ -2537,9 +2575,9 @@ export default function PortfolioExperience() {
             THREE.MathUtils.degToRad(camera.fov) / 2
           );
           const fillV = 0.78; // page fills ~78% of the view height
-          const fillH = mobile ? 0.95 : 0.9;
+          const fillH = compact ? 0.95 : 0.9;
           // horizontal content: page + part of the opened cover beside it
-          const contentH = sizeZ * (mobile ? 1.12 : 1.42);
+          const contentH = sizeZ * (compact ? 1.12 : 1.42);
           const distV = sizeX / (fillV * 2 * halfTan);
           const distH = contentH / (fillH * 2 * halfTan * camera.aspect);
           const dist = Math.max(distV, distH);
@@ -2557,7 +2595,7 @@ export default function PortfolioExperience() {
         }
       }
 
-      if (mobile) {
+      if (compact) {
         // Phones/tablets hold the device in portrait, and the old pose
         // rolled the camera 90° (z: 1.55) to compensate — which tilted the
         // whole gallery sideways in landscape/desktop windows under the
@@ -2581,10 +2619,10 @@ export default function PortfolioExperience() {
       }
       projects.forEach((project) => {
         if (project.mesh) {
-          project.mesh.position.z = mobile ? -1.128 : -1.148;
+          project.mesh.position.z = compact ? -1.128 : -1.148;
         }
         if (project.frame) {
-          project.frame.position.z = mobile ? -1.132 : -1.152;
+          project.frame.position.z = compact ? -1.132 : -1.152;
         }
       });
     }
@@ -2609,6 +2647,11 @@ export default function PortfolioExperience() {
     gltfLoader.load(
       '/models/room.glb',
       function (room) {
+        // the component may unmount while the GLB is still decoding —
+        // bail before building anything so no scene graph, material or
+        // canvas texture leaks past the cleanup that already ran
+        if (worldDisposed) return;
+
         // load video
         const video = document.createElement('video');
         video.src = '/textures/arcane.mp4';
@@ -2619,7 +2662,7 @@ export default function PortfolioExperience() {
         videoEl = video;
 
         // create video texture
-        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture = new THREE.VideoTexture(video);
         // Linear filtering — the footage reads as smooth real video
         // instead of nearest-neighbor blocks; the sRGB decode is skipped
         // too so it shows at its authored brightness on screen
@@ -2916,20 +2959,26 @@ export default function PortfolioExperience() {
 
             // about-me page: canvas texture with measured typesetting
             // (single left margin, wrapped lines, constant leading) —
-            // replaces the old hand-baked jpg whose lines drifted
-            bookPage = createBookPage();
-            bookMat = new THREE.MeshStandardMaterial({
-              color: 0xffffff,
-              map: bookPage.texture,
-            });
-            book.material = bookMat;
-            // LOW env boost (registered before the room-wide pass): the
-            // white paper is a mirror for the studio environment at
-            // default intensity, and at night that glare drowned the ink
-            // — at 0.3 the page keeps a paper-soft sheen by day and goes
-            // quiet with the room at night (the warm reading light above
-            // the desk takes over)
-            registerEnvMaterial(bookMat, 0.3);
+            // replaces the old hand-baked jpg whose lines drifted. A 2D
+            // canvas failing here must not abort the whole room build —
+            // the book keeps its stock material instead.
+            try {
+              bookPage = createBookPage();
+              bookMat = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                map: bookPage.texture,
+              });
+              book.material = bookMat;
+              // LOW env boost (registered before the room-wide pass): the
+              // white paper is a mirror for the studio environment at
+              // default intensity, and at night that glare drowned the ink
+              // — at 0.3 the page keeps a paper-soft sheen by day and goes
+              // quiet with the room at night (the warm reading light above
+              // the desk takes over)
+              registerEnvMaterial(bookMat, 0.3);
+            } catch (err) {
+              console.warn('Book page texture unavailable:', err);
+            }
           }
 
           if (child.name === 'SwitchBoard') {
@@ -3079,10 +3128,16 @@ export default function PortfolioExperience() {
           phoneRestPos = mobile.position.clone();
           const ax = screenAxes();
           const aspect = ax ? ax.uLen / ax.vLen : 0.475;
-          phone = createPhoneScreen(aspect);
-          mobileScreen.material = new THREE.MeshBasicMaterial({
-            map: phone.texture,
-          });
+          // same deal as the book page: degrade to the stock screen
+          // material rather than abort the room mid-build
+          try {
+            phone = createPhoneScreen(aspect);
+            mobileScreen.material = new THREE.MeshBasicMaterial({
+              map: phone.texture,
+            });
+          } catch (err) {
+            console.warn('Phone screen texture unavailable:', err);
+          }
         }
 
         // Rubik's cube: hide the static prop and rebuild it as a real,
@@ -3612,6 +3667,7 @@ export default function PortfolioExperience() {
       },
       undefined,
       function (error) {
+        if (worldDisposed) return;
         console.error(error);
         // don't trap the user behind the loader if assets fail
         setReady(true);
@@ -3639,6 +3695,10 @@ export default function PortfolioExperience() {
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
+      // re-apply the DPR cap too — the window can move to a monitor with
+      // a different devicePixelRatio, or cross the 992px mobile breakpoint
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
+      composer?.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
       renderer.setSize(window.innerWidth, window.innerHeight);
       composer?.setSize(window.innerWidth, window.innerHeight);
       // re-apply responsive framing (handles device rotation)
@@ -3646,12 +3706,31 @@ export default function PortfolioExperience() {
     };
     window.addEventListener('resize', onResize);
 
+    // WebGL context loss — per docs/performance-regression-checklist.md,
+    // never keep rendering against a lost context: stop the loop and put
+    // the textual fallback up instead of a dead black canvas
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      cancelAnimationFrame(rafId);
+      setWebglUnavailable(true);
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost, false);
+
     // CLEANUP
     return () => {
       effectActive = false;
       worldDisposed = true;
       cancelAnimationFrame(rafId);
+      // release the video element fully — pausing alone leaves the media
+      // pipeline and its decoding buffers alive until GC
       videoEl?.pause();
+      if (videoEl) {
+        videoEl.removeAttribute('src');
+        videoEl.load();
+        videoEl = null;
+      }
+      videoTexture?.dispose();
+      videoTexture = null;
       window.removeEventListener('click', onWindowClick);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerdown', markActive);
@@ -3660,11 +3739,15 @@ export default function PortfolioExperience() {
       window.removeEventListener('keydown', markActive);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('resize', onResize);
+      canvas.removeEventListener('webglcontextlost', onContextLost);
       gsap.globalTimeline.clear();
       controls.dispose();
       dracoLoader.dispose();
       ktx2Loader.dispose();
       renderer.dispose();
+      // force-release the WebGL context itself — renderer.dispose() alone
+      // leaves the context (and its GPU memory) parked until page unload
+      renderer.forceContextLoss();
       canvas.remove();
       scene.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
@@ -3712,7 +3795,10 @@ export default function PortfolioExperience() {
     if (!entered) {
       setEntered(true);
       worldRef.current?.startIntro();
-      window.setTimeout(() => setLoaderGone(true), 850);
+      loaderTimeoutRef.current = window.setTimeout(
+        () => setLoaderGone(true),
+        850
+      );
     }
   };
 
@@ -3738,14 +3824,11 @@ export default function PortfolioExperience() {
           </a>
         </section>
       )}
+      {/* when the 3D scene can't run, the about copy below becomes the
+          visible page content instead of screen-reader-only text */}
       <div className="vignette" aria-hidden="true" />
 
-      <div
-        id="hover-tooltip"
-        ref={tooltipRef}
-        role="status"
-        aria-hidden="true"
-      />
+      <div id="hover-tooltip" ref={tooltipRef} role="status" />
 
       {!loaderGone && !webglUnavailable && (
         <div
@@ -3936,7 +4019,7 @@ export default function PortfolioExperience() {
                     href={GITHUB_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    id="contact-email"
+                    id="contact-link"
                   >
                     <span>github.com/navairgap</span>
                   </a>
@@ -4008,7 +4091,7 @@ export default function PortfolioExperience() {
         </nav>
       </header>
 
-      <main>
+      <main className={webglUnavailable ? 'main--fallback' : undefined}>
         {closeVisible && (
           <a
             href="#"
@@ -4151,7 +4234,7 @@ export default function PortfolioExperience() {
       )}
 
       <footer>
-        2026 portfolio — designed &amp; developed by{' '}
+        {new Date().getFullYear()} portfolio — designed &amp; developed by{' '}
         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer">
           NAV
         </a>{' '}
