@@ -2,8 +2,6 @@
 
 **Live demo → https://3d-portfolio-nav-8975.vercel.app**
 
-![The 3D room, light theme](docs/screenshot-light.png)
-
 An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — open the notebook on the desk to read my story, walk the project wall, answer the phone for contacts, watch the RGB keyboard type, spin the Rubik's cube, and power the PC on and off.
 
 Built with **Next.js + Three.js**. No UI framework, no game engine — one imperative Three.js scene plus hand-written HUD styles.
