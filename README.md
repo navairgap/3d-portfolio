@@ -2,29 +2,35 @@
 
 **Live demo → https://3d-portfolio-nav-8975.vercel.app**
 
-An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — click the monitor, peek at the keyboard, open the books, spin the Rubik's cube, and answer the phone.
+![The 3D room, light theme](docs/screenshot-light.png)
 
-Built with **Next.js + Three.js**.
+An interactive, photorealistic 3D portfolio that runs entirely in the browser. Explore a security researcher's room — open the notebook on the desk to read my story, walk the project wall, answer the phone for contacts, watch the RGB keyboard type, spin the Rubik's cube, and power the PC on and off.
+
+Built with **Next.js + Three.js**. No UI framework, no game engine — one imperative Three.js scene plus hand-written HUD styles.
 
 ## Highlights
 
-- **Fully interactive 3D room** — desk setup, honeycomb wall, plants, PC tower, phone, books, and a Rubik's cube
-- **Day / Night themes** — toggling adjusts the sun, LED strips, screen glow, wall text, and the overall mood of the scene
-- **PBR materials** — normal, roughness, and metalness maps on keycaps, honeycomb wall, desk, floor, and tower
-- **HDRI environment lighting** with soft shadows (PCFSoft) and a monitor light that spills onto the desk
-- **Cinematic post-processing** — SSAO, bloom, depth of field, and film grain, with an adaptive quality guard for weaker GPUs
-- **Performance-first** — Draco-compressed geometry, KTX2 GPU-native textures, LODs on the plant and PC tower
-- **Subtle sound design** on interactions
+- **Fully interactive 3D room** — desk setup, honeycomb wall, plants, PC tower, phone, notebook, and a Rubik's cube, all with hover tooltips and click choreography
+- **Day / Night themes** — the light switch actually works: LED strips, neon honeycomb, screen glow, and the whole mood of the scene follow it
+- **Procedural everything** — keycaps, honeycomb wall, carpet, floor, book pages, and project posters are drawn in code (canvas + geometry), so there are almost no bitmap assets to load
+- **PBR materials + HDRI environment lighting** with soft shadows and a monitor light that spills onto the desk
+- **Cinematic post-processing** — SSAO, bloom, depth of field, and film grain, with an adaptive quality guard that degrades gracefully on weaker GPUs
+- **Performance-first** — Draco-compressed geometry, KTX2 GPU-native textures, LODs on the plant and PC tower, DPR capped per device class
+- **Subtle sound design** — key clicks, cube clacks, and coffee slurps synthesized live with WebAudio (toggleable)
 
 ## Tech Stack
 
-| Layer         | Tech                                                       |
-| ------------- | ---------------------------------------------------------- |
-| Framework     | Next.js 16 (App Router) · React 19 · TypeScript            |
-| 3D            | Three.js · custom postprocessing chain (SSAO, bloom, DoF, grain) |
-| Styling       | Tailwind CSS 4 · shadcn/ui                                 |
-| Assets        | GLB (Draco) · KTX2/Basis · HDRI (RGBE)                     |
-| DB (optional) | Prisma + SQLite                                            |
+| Layer     | Tech                                                              |
+| --------- | ----------------------------------------------------------------- |
+| Framework | Next.js 16 (App Router) · React 19 · TypeScript (strict)          |
+| 3D        | Three.js 0.149 (pinned) · GSAP · custom SSAO/bloom/DoF/grain chain |
+| Styling   | Hand-written CSS (`portfolio.css`) — no CSS framework             |
+| Fonts     | Poppins (Google Fonts) · typekit-style JSON for 3D wall text       |
+| Assets    | GLB (Draco) · KTX2/Basis · HDRI (RGBE) · MP4                      |
+
+> Three.js is deliberately pinned to 0.149.0. Upgrading means migrating the
+> whole color-management layer (`outputEncoding` → `colorSpace`, texture
+> encodings, PMREM changes) — noted as future work, not scheduled.
 
 ## Getting Started
 
@@ -37,145 +43,88 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000**. No environment variables are required for the 3D site.
+Open **http://localhost:3000**. No environment variables are required — the site runs as-is.
 
-`npm install` automatically runs `prisma generate` (a `postinstall` script), so the project builds out of the box on any machine. Dependencies are locked via `package-lock.json` — use npm.
-
-> Optional: the project ships with a Prisma schema. To use it, copy `.env.example` to `.env` and run `npm run db:push`.
+Dependencies are locked via `package-lock.json` — use npm.
 
 ## Scripts
 
-| Command           | Description                      |
-| ----------------- | -------------------------------- |
-| `npm run dev`     | Start the dev server (port 3000)                     |
-| `npm run build`   | Production build (runs `prisma generate` first)      |
-| `npm run start`   | Serve the production build                           |
-| `npm run lint`    | Run ESLint                                           |
-| `npm run db:push` | Push the Prisma schema to SQLite                     |
+| Command         | Description                    |
+| --------------- | ------------------------------ |
+| `npm run dev`   | Start the dev server (port 3000) |
+| `npm run build` | Production build               |
+| `npm start`     | Serve the production build     |
+| `npm run lint`  | Run ESLint                     |
 
 ## Project Structure
 
 ```
 src/
-  app/                  # Next.js App Router — single-page entry
+  app/
+    layout.tsx                 # metadata (SEO/OG), Poppins, global CSS import
+    page.tsx                   # client entry — dynamic-imports the experience
   components/
-    portfolio/          # The 3D experience
-      PortfolioExperience.tsx   # scene, lighting, camera, post-processing
-      gamingKeyboard.ts         # procedural RGB keycaps + PBR caps
-      hexaWall.ts               # honeycomb wall with normal maps
-      phoneScreen.ts            # in-world phone UI
-      bookPage.ts               # book pages & covers
-      rubiksCube.ts             # Rubik's cube
-      floor.ts / carpet.ts      # floor + LED strips, rug
-      pbr.ts                    # procedural normal/roughness map generators
-      sounds.ts                 # WebAudio-synthesized interaction sounds
-    ui/                   # shadcn/ui primitives
-  hooks/                # shared React hooks
-  lib/                  # utils + optional Prisma client
+    portfolio/
+      PortfolioExperience.tsx  # the world: scene, camera choreography,
+                               # lights, post-processing, raycasting, HUD
+      gamingKeyboard.ts        # procedural 60% ANSI RGB keycaps
+      hexaWall.ts              # seamless honeycomb map/normal/emissive
+      phoneScreen.ts           # canvas phone UI + link hit-testing
+      bookPage.ts              # measured typesetting on canvas
+      bookCover.ts             # vector-drawn cover
+      projectPosters.ts        # vector-drawn project wall art
+      rubiksCube.ts            # procedural 3x3 cube (scramble/solve)
+      floor.ts / carpet.ts     # floor skin + LED strips, woven rug
+      pbr.ts                   # Sobel normals, roughness, box projection
+      sounds.ts                # WebAudio synthesis (keys, cube, coffee)
+      portfolio.css            # loader, HUD, fallback, responsive styles
 public/
-  models/               # room.glb (Draco-compressed)
-  textures/             # HDRI, KTX2, book covers, project art
-  draco/  ktx2/         # decoders & transcoders
-prisma/
-  schema.prisma         # optional database schema
+  models/room.glb              # the room (Draco-compressed)
+  textures/                    # HDRI, monitor video, KTX2 sample
+  fonts/unione.json            # extruded 3D wall text
+  draco/  ktx2/                # runtime decoders (decoder files only)
+docs/                          # performance & security checklists
+.github/workflows/ci.yml       # lint + typecheck + build on every push
 ```
 
-## Credits
+## How it works
 
-- HDRI environment map from the [three.js examples](https://threejs.org) collection
-- Geometry & texture compression: Google [Draco](https://github.com/google/draco) and Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) — transcoders bundled
-- Built with [Three.js](https://threejs.org), [Next.js](https://nextjs.org), and [shadcn/ui](https://ui.shadcn.com)
+`PortfolioExperience.tsx` owns everything: it creates the renderer imperatively (safe under StrictMode remounts), builds the world once the room GLB decodes, and exposes a small `WorldActions` bridge (`goToAbout`, `goToProjects`, `toggleLights`, …) back to React through a ref. React state is UI-only — loader, HUD toggles, hint chips — and every camera move is sequenced with an invalidation counter so rapid view-switching can never fight itself.
 
----
-
-© NAVAIRGAP — security researcher & backend developer
-
----
-maintained · verified 2026-09-30
----
-maintained · verified 2026-10-01
----
-maintained · verified 2026-10-02
+Most of what you see is **drawn in code**: the keyboard legends, the honeycomb wall, the carpet weave, the book's typeset page, and all six project posters are canvas textures generated at load time. `public/` stays small and the art stays editable.
 
 ## Performance notes
 
 - Geometry ships Draco-compressed; textures use KTX2/Basis so GPU memory stays bounded.
-- An adaptive quality guard drops post-processing on weaker GPUs.
-- LODs on the plant and PC tower keep draw calls flat.
-
-## Environment variables
-
-None are required for the 3D site. The optional Prisma integration reads:
-
-| variable | default | purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | `file:./db/custom.db` | SQLite path for the demo API routes |
-
-
-## Accessibility
-
-The 3D scene is decorative — all content is reachable as text. Reduced-motion users get a static render. Browsers that cannot create a WebGL context receive a visible fallback and can still open the project links. Keyboard navigation works through the whole site.
-
-
-## Installation
-
-```bash
-git clone https://github.com/navairgap/3d-portfolio.git
-cd 3d-portfolio
-npm install
-npm run dev
-```
-
-Node 20+ recommended. `npm run build && npm start` for production.
-
+- An adaptive quality guard watches frame time and drops SSAO → DoF → bloom in that order when the budget slips (mobile skips SSAO/DoF outright).
+- LODs on the plant and PC tower keep draw calls flat; dust motes render only when visible.
+- Target: 60 fps on integrated graphics. See `docs/performance-regression-checklist.md` before shipping visual changes.
 
 ## Deployment
 
-ships as a static Next build. vercel and netlify both work out of the box; any static host works if you set the framework preset to next.js. the optional prisma layer needs a database — skip it for the pure 3D site.
+This is **not a static export** — it's a standard Next.js server build:
 
-## Upgrading
+- `next.config.ts` injects security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`), which require the Next server (or a host that runs it).
+- **Vercel works with zero config** (this repo's deploy target). Any Node host works: `npm run build && npm start`.
+- Header expectations and post-deploy checks: `docs/security-response-header-checklist.md`.
 
-1. `git pull && npm ci` (regenerates the lockfile cleanly)
-2. if you use the prisma layer: `npx prisma db push`
-3. `npm run build` — the 3D site needs nothing else
+## Accessibility
 
-## Upgrading
-
-1. `git pull && npm ci` (regenerates the lockfile cleanly)
-2. if you use the prisma layer: `npx prisma db push`
-3. `npm run build` — the 3D site needs nothing else
-
-## Repo map
-
-the 3D scene lives in `src/components/portfolio/` — `PortfolioExperience.tsx` owns camera, lights and post-processing; the room props are siblings. `public/` holds the draco models, ktx2 textures and the hdri. prisma is optional and touches nothing in the scene.
-
-## Asset pipeline
-
-blender → gltf export → draco compression (gltf-transform), textures → ktx2/basis, environment → .hdr. the decoders in `public/draco` and `public/ktx2` are what the loader fetches at runtime — keep them next to the models.
-
-## Performance budget
-
-target 60fps on integrated graphics. the costs: SSAO > bloom > shadows; the adaptive guard drops them in that order when frame time slips. texture memory is capped by ktx2 compression.
-
-## Non-goals
-
-not a game: no physics, no interaction beyond the authored hotspots, no multiplayer. it is a room you visit, not a world you live in.
-
-## FAQ
-
-**why Next.js and not Vite?** the project predates the React 19 stable line and wanted SSR metadata per route; with the site now effectively static, Vite would be the honest rewrite — noted, not scheduled.
-
-**can i swap the room model?** the loader takes any glTF; the interaction anchors are named meshes, so a new room means remapping those names in one file.
+- The page's `<h1>` and story copy are always in the accessibility tree; when WebGL can't run (or the context is lost mid-session), the fallback becomes the visible page with the same content plus project links.
+- Room actions have keyboard equivalents in the quick-actions bar; ESC resets the view; the contact dropdown closes with Escape and returns focus.
+- `prefers-reduced-motion` is honored in both JS choreography and CSS; focus rings are visible, including Windows High Contrast mode.
 
 ## Editing
 
-room text and panels are plain strings in the scene components — change, `npm run dev`, ship. the baked lighting only matters if you move the furniture; words are free.
+Room text, project URLs, and poster content are plain strings/data in `src/components/portfolio/` — change, `npm run dev`, ship. The baked lighting only matters if you move the furniture; words are free. If you swap `room.glb`, the interaction anchors are named meshes (`Book`, `Mobile`, `CPU`, `Rubik Cube`, `SwitchBoard`, …) — remap those names in `PortfolioExperience.tsx`.
 
-## Support
+## Credits
 
-issues with a screenshot of the room and the browser's console output get answered; 'how do i make it mine' gets pointed at the repo map and the license.
+- Room model concept adapted from [sushilthapa98/3d-portfolio](https://github.com/sushilthapa98/3d-portfolio) (credited in the footer)
+- HDRI environment map from the [three.js examples](https://threejs.org) collection
+- Geometry & texture compression: Google [Draco](https://github.com/google/draco) and Binomial [Basis Universal](https://github.com/BinomialLLC/basis_universal) — runtime decoders bundled under `public/`
+- Built with [Three.js](https://threejs.org), [Next.js](https://nextjs.org), and [GSAP](https://gsap.com)
 
+## License
 
-## Release sanity checks
-
-Before publishing, verify keyboard navigation, reduced-motion behavior, and the non-WebGL fallback. Dispose of animation frames and observers when scenes unmount so route changes do not leave duplicate loops running.
+[MIT](LICENSE) © NAV (navairgap)

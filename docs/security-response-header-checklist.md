@@ -6,11 +6,10 @@ the application or its dependencies.
 
 ## Expected responses
 
-Check both the home page and a nested route after deploying:
+The site is a single-page experience — check the home page after deploying:
 
 ```sh
 curl -sSI https://3d-portfolio-nav-8975.vercel.app/
-curl -sSI https://3d-portfolio-nav-8975.vercel.app/work
 ```
 
 The responses should include:
